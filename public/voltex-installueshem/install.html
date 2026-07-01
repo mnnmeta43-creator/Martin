@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ff5c00">
+  <meta name="application-name" content="VOLTEX">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="VOLTEX">
+  <title>Instalo VOLTEX</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/voltex-192.png">
+  <link rel="icon" href="icons/voltex-192.png">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 10%,#3b1a09 0,#10141a 46%,#090b0e 100%);color:#f7f7f7;font-family:Arial,sans-serif}.card{width:min(440px,100%);text-align:center;padding:28px 22px;border:1px solid #3a4655;border-radius:24px;background:rgba(22,28,37,.94);box-shadow:0 25px 70px rgba(0,0,0,.45)}img{width:132px;height:132px;border-radius:30px;box-shadow:0 16px 38px rgba(255,92,0,.35)}h1{margin:18px 0 5px;font-size:2rem;letter-spacing:4px}p{margin:0 0 18px;color:#adb5bd;line-height:1.55}.install{width:100%;min-height:52px;border:0;border-radius:14px;background:#ff5c00;color:white;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 12px 28px rgba(255,92,0,.3)}.open{display:block;margin-top:12px;padding:13px;border:1px solid #3b4654;border-radius:14px;color:#fff;text-decoration:none}.status{min-height:44px;margin-top:14px;color:#e4e7ea;font-size:.85rem;line-height:1.5}.small{margin-top:12px;color:#8e98a3;font-size:.74rem}</style>
+</head>
+<body>
+  <main class="card">
+    <img src="icons/voltex-512.png" alt="Logo VOLTEX">
+    <h1>VOLTEX</h1>
+    <p>Instalo aplikacionin teknik në PC ose telefon dhe përdore edhe jashtë internetit.</p>
+    <button class="install" id="installBtn">⬇ Instalo VOLTEX</button>
+    <a class='open' href='/voltex-installueshem/'>Hap aplikacionin</a>
+    <div class="status" id="status">Po kontrolloj mundësinë e instalimit…</div>
+    <div class="small">Android/PC: Chrome ose Edge. iPhone/iPad: Safari → Share → Add to Home Screen.</div>
+  </main>
+<script>
+let promptEvent=null;
+const status=document.getElementById('status');
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();promptEvent=e;status.textContent='Aplikacioni është gati për instalim.';});
+window.addEventListener('appinstalled',()=>{status.textContent='VOLTEX u instalua me sukses.';promptEvent=null;});
+document.getElementById('installBtn').addEventListener('click',async()=>{
+  if(promptEvent){promptEvent.prompt();const choice=await promptEvent.userChoice;status.textContent=choice.outcome==='accepted'?'Instalimi u pranua.':'Instalimi u anulua.';promptEvent=null;return;}
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)){status.textContent='Në Safari shtyp Share dhe zgjidh Add to Home Screen.';}else{status.textContent='Nga menuja e shfletuesit zgjidh Install app ose Add to Home screen.';}
+});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'));
+setTimeout(()=>{if(!promptEvent)status.textContent=/iphone|ipad|ipod/i.test(navigator.userAgent)?'Në Safari shtyp Share → Add to Home Screen.':'Shtyp butonin ose përdor menunë e shfletuesit → Install app.';},1200);
+</script>
+</body>
+</html>

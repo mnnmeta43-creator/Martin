@@ -107,6 +107,17 @@ body {
   color: #c0392b;
 }
 
+.register-app-note {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.register-app-note a {
+  color: #6c5ce7;
+  font-weight: 600;
+}
+
 footer {
   text-align: center;
   padding: 2rem 1rem;
