@@ -6,7 +6,7 @@ const path = require("path");
 
 const checkoutUrl =
   process.env.LEMONSQUEEZY_CHECKOUT_URL ||
-  "https://your-store-slug.lemonsqueezy.com/buy/your-variant-id";
+  "https://voltex.lemonsqueezy.com/checkout/buy/7246cbb6-0631-428c-a2ba-74b6cec3207b";
 
 const contents = `// Generated at build time by scripts/generate-config.js. Do not edit by hand.
 window.VOLTEX_CONFIG = {
