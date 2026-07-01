@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="sq">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Voltex</title>
+    <link href="/css/voltex.css" rel="stylesheet" type="text/css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:title" content="Voltex" />
+    <meta property="og:description" content="Voltex — blej me Lemon Squeezy, regjistrohu me email." />
+    <script src="/js/config.js"></script>
+    <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
+  </head>
+  <body>
+    <header class="voltex-header">
+      <div class="voltex-logo">Voltex</div>
+      <nav>
+        <a href="#pricing">Blej tani</a>
+        <a href="#register">Regjistrohu</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Voltex</h1>
+        <p>Zgjidhja jote e thjeshte, e shpejte dhe e sigurte — blej direkt me Lemon Squeezy.</p>
+        <a href="#" data-lemonsqueezy-checkout class="cta-button">Blej Tani</a>
+      </section>
+
+      <section id="pricing" class="pricing">
+        <h2>Blerja</h2>
+        <p>Pagesa proceset ne menyre te sigurte permes Lemon Squeezy (karte, PayPal, etj).</p>
+        <a href="#" data-lemonsqueezy-checkout class="cta-button">Vazhdo te Checkout</a>
+      </section>
+
+      <section id="register" class="register">
+        <h2>Regjistrohu me Email</h2>
+        <p>Lena email-in tend qe te marresh licencen/qasjen dhe njoftime per Voltex.</p>
+
+        <form
+          id="client-registration-form"
+          name="client-registration"
+          method="POST"
+          data-netlify="true"
+          netlify-honeypot="bot-field"
+        >
+          <input type="hidden" name="form-name" value="client-registration" />
+          <p class="hidden-field">
+            <label>Mos e plotëso këtë fushë nese je njeri: <input name="bot-field" /></label>
+          </p>
+
+          <label for="name">Emri</label>
+          <input type="text" id="name" name="name" autocomplete="name" />
+
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" />
+
+          <button type="submit">Regjistrohu</button>
+          <p id="registration-status" class="registration-status" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; <span id="year"></span> Voltex</p>
+    </footer>
+
+    <script src="/js/voltex-app.js"></script>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
