@@ -74,7 +74,8 @@ describe('buildLocationAnalysis', () => {
 
   it('warns when the operating country is not declared as operable', () => {
     const elsewhere = buildLocationAnalysis(PLAN_ARCHETYPE, PLAN_PROFILE, 'DEU', null);
-    expect(elsewhere.registrationVsOperationSq.operationSq).toContain('Nuk e keni deklaruar');
+    expect(elsewhere.registrationVsOperationSq.operationSq).toContain('nuk është ndër vendet ku keni deklaruar');
+    expect(elsewhere.registrationVsOperationSq.registrationSq).toContain('është tjetër');
   });
 
   it('uses only official links from the registry', () => {

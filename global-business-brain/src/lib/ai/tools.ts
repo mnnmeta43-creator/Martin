@@ -55,7 +55,7 @@ export const TOOL_SCHEMAS = {
     countryCode: z.string().min(2).max(80).describe('The other economy: ISO alpha-3 code or the name in Albanian or English.'),
   }),
   adapt_to_capital: z.object({
-    targetCapital: z.number().positive().max(1e12).describe("Capital the user can put in, in the project's currency."),
+    targetCapital: z.number().min(0).max(1e12).describe("Capital the user can put in, in the project's currency (0 = test demand only)."),
   }),
   list_weakest_assumptions: z.object({}),
   list_tasks_due: z.object({
@@ -78,7 +78,7 @@ const DESCRIPTIONS: Record<ToolName, string> = {
   compare_country:
     "Evaluates the project's business idea in another economy with the app's idea engine and returns both rows: orientation score (not a probability), capital range, number of macro claims supported/contradicted, purchasing power and price level with citation ids, whether the user can operate there, data coverage and warnings.",
   adapt_to_capital:
-    "Proposes the smallest ordered set of reductions (optional startup items, smaller initial inventory, smaller reserve, optional monthly costs) to bring the project's capital requirement down to a target, with the engine's resulting total, whether the target is reached, the trade-offs, and the idea's low-capital test. It never changes the project.",
+    "Proposes an ordered set of reductions (assets the user already owns, starting from home when the idea allows it, used/simpler equipment, then optional startup items, smaller initial inventory, smaller reserve, optional monthly costs) to bring the project's capital requirement down to a target, with the engine's resulting total, whether the target is reached, the trade-offs, and the idea's low-capital test. It never changes the project.",
   list_weakest_assumptions:
     "Ranks the financial assumptions by impact (deterministic sensitivity analysis on the base scenario, ±20%), lists cost lines that are still general assumptions versus verified/quoted, the unit price/cost and customer-ramp assumptions, macro links lacking data, and recorded evidence counts.",
   list_tasks_due:

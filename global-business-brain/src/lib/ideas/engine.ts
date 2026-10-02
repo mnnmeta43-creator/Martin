@@ -240,7 +240,8 @@ function matchesPreFilters(a: BusinessArchetype, filters: IdeaFilters): boolean 
   return true;
 }
 
-function compareRecommendations(x: IdeaRecommendation, y: IdeaRecommendation): number {
+/** Ranking order: score desc (unscored last), then evidence quality desc, then name, then id. */
+export function compareRecommendations(x: IdeaRecommendation, y: IdeaRecommendation): number {
   const sx = x.score.total ?? -1;
   const sy = y.score.total ?? -1;
   if (sx !== sy) return sy - sx;

@@ -160,8 +160,11 @@ describe('scoreIdea', () => {
   it('caps the capital dimension at 100 and lowers it when capital is short', () => {
     const rich = dimension(scoreIdea(input({ profile: testProfile({ capital: { amount: 1_000_000, currency: 'EUR' } }) })).dimensions, 'kapitali');
     expect(rich.score).toBe(100);
-    const poor = dimension(scoreIdea(input({ profile: testProfile({ capital: { amount: 100, currency: 'EUR' } }) })).dimensions, 'kapitali');
-    expect(poor.score as number).toBeLessThan(10);
+    const poorInput = input({ profile: testProfile({ capital: { amount: 100, currency: 'EUR' } }) });
+    const poor = dimension(scoreIdea(poorInput).dimensions, 'kapitali');
+    const total = poorInput.projection?.capital.totalRequired as number;
+    expect(poor.score).toBe(Math.round((100 / total) * 1000) / 10);
+    expect(poor.score as number).toBeLessThan(100);
   });
 
   it('skills weigh required 60%, helpful 25%, sector experience 15%', () => {

@@ -29,7 +29,7 @@ import {
 import { sensitivityAnalysis } from '@/lib/finance/engine';
 import { formatMoney } from '@/lib/finance/format';
 import { getOfficialLinks } from '@/lib/data/sources/registry';
-import { computeProgress } from '@/lib/plan/progress';
+import { computeProgress, tasksForHorizon } from '@/lib/plan/progress';
 import { countryNameSq, recommendationFor, type AssistantContext } from '@/lib/ai/context';
 import { capList, moneySq, requireArchetype, requireProject, signedMoneySq, type ToolEnv } from '@/lib/ai/handlers/shared';
 
@@ -297,7 +297,7 @@ export function listTasksDue(input: { days: number }, env: ToolEnv) {
   const open = ctx.tasks
     .filter((t) => t.status === 'per_tu_bere' || t.status === 'ne_progres')
     .sort((a, b) => a.dayOffset - b.dayOffset || a.id.localeCompare(b.id));
-  const due = open.filter((t) => t.dayOffset < horizonEnd);
+  const due = tasksForHorizon(open, horizonEnd);
   const shown = capList(due, 10);
   const officialLinks = getOfficialLinks(project.countryCode)
     .slice(0, 6)

@@ -15,6 +15,7 @@ import {
 } from '@/lib/export/excel';
 import { DEMO_BANNER_SQ, EXPORT_CREATOR } from '@/lib/export/common';
 import { GENERATED_AT, makeExportInput } from './fixtures';
+import { FormulaEvaluator } from './formulaEval';
 
 const SCENARIOS: ScenarioId[] = ['baze', 'konservator', 'optimist'];
 const EXPECTED_SHEETS = [
@@ -51,8 +52,13 @@ function formulaOf(cell: ExcelJS.Cell): Formula {
   return value as Formula;
 }
 
+/**
+ * Cached result of a formula cell. The writer always emits `<v>` (also `<v>0</v>`), but exceljs's
+ * reader drops a cached 0 on load, so a missing result can only stand for 0 here.
+ */
 function resultOf(cell: ExcelJS.Cell): number {
-  return Number(formulaOf(cell).result);
+  const { result } = formulaOf(cell);
+  return result === undefined ? 0 : Number(result);
 }
 
 function allText(wb: ExcelJS.Workbook): string[] {
@@ -108,10 +114,10 @@ describe('buildFinancialWorkbook', () => {
     expect(projection.rows.length).toBe(input.project.financialInputs.horizonMonths);
     projection.rows.forEach((row, i) => {
       const r = PROJECTION_FIRST_DATA_ROW + i;
-      const revenue = formulaOf(ws.getCell(r, col('Të ardhurat')));
-      expect(revenue.formula).toMatch(/\*/);
-      expect(revenue.formula).toBe(`D${r}*E${r}`);
-      expect(Number(revenue.result)).toBeCloseTo(row.revenue, 2);
+      const revenueCell = ws.getCell(r, col('Të ardhurat'));
+      expect(formulaOf(revenueCell).formula).toMatch(/\*/);
+      expect(formulaOf(revenueCell).formula).toBe(`D${r}*E${r}`);
+      expect(resultOf(revenueCell)).toBeCloseTo(row.revenue, 2);
       expect(formulaOf(ws.getCell(r, col('Kostot variabël'))).formula).toBe(`D${r}*$E$4`);
       expect(resultOf(ws.getCell(r, col('Kostot variabël')))).toBeCloseTo(row.variableCosts, 2);
       expect(resultOf(ws.getCell(r, col('Kontributi')))).toBeCloseTo(row.contribution, 2);
@@ -121,9 +127,9 @@ describe('buildFinancialWorkbook', () => {
       expect(resultOf(ws.getCell(r, col('Rezultati neto')))).toBeCloseTo(row.netResult, 2);
       expect(formulaOf(ws.getCell(r, col('Fluksi neto i parasë'))).formula).toBe(`N${r}-O${r}`);
       expect(resultOf(ws.getCell(r, col('Fluksi neto i parasë')))).toBeCloseTo(row.netCashFlow, 2);
-      const balance = formulaOf(ws.getCell(r, col('Paraja në fund të muajit')));
-      expect(balance.formula).toBe(i === 0 ? `$E$5+P${r}` : `Q${r - 1}+P${r}`);
-      expect(Number(balance.result)).toBeCloseTo(row.cashBalance, 2);
+      const balanceCell = ws.getCell(r, col('Paraja në fund të muajit'));
+      expect(formulaOf(balanceCell).formula).toBe(i === 0 ? `$E$5+P${r}` : `Q${r - 1}+P${r}`);
+      expect(resultOf(balanceCell)).toBeCloseTo(row.cashBalance, 2);
       // Engine-only values are plain numbers.
       expect(ws.getCell(r, col('Hyrjet e parasë')).value).toBeCloseTo(row.cashIn, 6);
       expect(ws.getCell(r, col('Daljet e parasë')).value).toBeCloseTo(row.cashOut, 6);
@@ -148,9 +154,8 @@ describe('buildFinancialWorkbook', () => {
     const ws = sheet(wb, SHEET_NAMES.projection[scenario]);
     const projection = input.projections[scenario];
     const opening = formulaOf(ws.getCell('E5'));
-    expect(opening.formula).toContain('Supozimet!');
-    expect(opening.formula).toContain("'Kostot e hapjes'!");
-    expect(Number(opening.result)).toBeCloseTo(projection.capital.ownCapital - projection.capital.startupTotal, 2);
+    expect(opening.formula).toMatch(/^'Supozimet'!\$B\$\d+-'Kostot e hapjes'!\$C\$\d+$/);
+    expect(resultOf(ws.getCell('E5'))).toBeCloseTo(projection.capital.ownCapital - projection.capital.startupTotal, 2);
 
     const totalRow = PROJECTION_FIRST_DATA_ROW + projection.rows.length;
     expect(ws.getCell(totalRow, 1).value).toBe('Gjithsej');
@@ -165,9 +170,9 @@ describe('buildFinancialWorkbook', () => {
       ['Fluksi neto i parasë', projection.totals.netCashFlow],
     ];
     for (const [name, expected] of checks) {
-      const cell = formulaOf(ws.getCell(totalRow, col(name)));
-      expect(cell.formula).toMatch(/^SUM\(/);
-      expect(Number(cell.result)).toBeCloseTo(expected, 2);
+      const cell = ws.getCell(totalRow, col(name));
+      expect(formulaOf(cell).formula).toMatch(/^SUM\(/);
+      expect(resultOf(cell)).toBeCloseTo(expected, 2);
     }
   });
 
@@ -210,8 +215,8 @@ describe('buildFinancialWorkbook', () => {
 
     const cap = sheet(wb, SHEET_NAMES.capital);
     const labels = cap.getColumn(1).values as unknown[];
-    const totalRow = labels.findIndex((v) => typeof v === 'string' && v.startsWith('Kapitali i nevojshëm'));
-    const gapRow = labels.findIndex((v) => typeof v === 'string' && v.startsWith('Mungesa e kapitalit'));
+    const totalRow = labels.findIndex((v) => typeof v === 'string' && v.startsWith('Kapitali i nevojshëm ='));
+    const gapRow = labels.findIndex((v) => typeof v === 'string' && v.startsWith('Mungesa e kapitalit ='));
     expect(resultOf(cap.getCell(totalRow, 2))).toBeCloseTo(base.capital.totalRequired, 2);
     expect(formulaOf(cap.getCell(gapRow, 2)).formula).toMatch(/^MAX\(0,/);
     expect(resultOf(cap.getCell(gapRow, 2))).toBeCloseTo(base.capital.gap, 2);
@@ -237,6 +242,25 @@ describe('buildFinancialWorkbook', () => {
     expect(texts.some((t) => t.includes('jo garanci fitimi'))).toBe(true);
     expect(texts.some((t) => t.includes('Paga e pronarit përfshihet'))).toBe(true);
     expect(texts.some((t) => t.includes('DEMO'))).toBe(false);
+  });
+
+  it('every formula, recomputed from the sheet cells alone, reproduces its cached engine value', () => {
+    const evaluator = new FormulaEvaluator(wb);
+    let checked = 0;
+    wb.eachSheet((ws) =>
+      ws.eachRow((row) =>
+        row.eachCell((cell) => {
+          const value = cell.value as unknown;
+          if (!value || typeof value !== 'object' || !('formula' in (value as object))) return;
+          const expected = resultOf(cell);
+          const actual = evaluator.evaluate(ws.name, (value as Formula).formula);
+          const tolerance = 1e-6 * Math.max(1, Math.abs(expected));
+          expect(Math.abs(actual - expected), `${ws.name}!${cell.address}: ${(value as Formula).formula}`).toBeLessThanOrEqual(tolerance);
+          checked++;
+        }),
+      ),
+    );
+    expect(checked).toBeGreaterThan(300);
   });
 
   it('uses 2-decimal money formats for EUR', () => {

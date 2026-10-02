@@ -2,13 +2,15 @@
  * Mjetet financiare të asistentit: skenarë "çfarë ndodh nëse" dhe përshtatja me kapital më të vogël.
  *
  * These are the only places the assistant gets financial numbers from. Both run the deterministic
- * engine (`applyShock` + `projectScenario`, `suggestCapitalReductions`) on the project's saved
- * inputs and never modify the project: results are proposals the user may apply in the calculator.
+ * engine (`applyShock` + `projectScenario`; `adaptToLowerCapital`, which ends with the finance
+ * module's capital reductions) on the project's saved inputs and never modify the project:
+ * results are proposals the user may apply in the calculator.
  */
 import type { FinancialInputs, ProjectionResult, ScenarioId } from '@/lib/domain/types';
 import { SCENARIO_LABELS } from '@/lib/domain/taxonomy';
 import { applyShock, projectScenario, type FinancialShock } from '@/lib/finance/engine';
-import { suggestCapitalReductions } from '@/lib/finance/capital';
+import { adaptToLowerCapital } from '@/lib/ideas/adapt';
+import { effectiveProfile } from '@/lib/ai/context';
 import { formatNumber } from '@/lib/finance/format';
 import {
   moneySq,
@@ -142,34 +144,29 @@ export function runFinancialScenario(input: ScenarioInput, env: ToolEnv) {
 export function adaptToCapital(input: { targetCapital: number }, env: ToolEnv) {
   const project = requireProject(env.ctx);
   const archetype = requireArchetype(env.ctx);
+  const profile = effectiveProfile(env.ctx);
+  if (!profile) throw new ToolError('Profili mungon; përshtatja nuk mund të llogaritet.');
   const inputs: FinancialInputs = project.financialInputs;
   const currency = inputs.currency;
-  if (!(input.targetCapital > 0)) throw new ToolError('Kapitali i synuar duhet të jetë më i madh se zero.');
   const before = env.ctx.baseProjection ?? projectScenario(inputs, 'baze');
-  const reduction = suggestCapitalReductions(inputs, input.targetCapital, 'baze');
-  const after = projectScenario(reduction.inputs, 'baze');
+  const adapted = adaptToLowerCapital(archetype, profile, inputs, input.targetCapital);
+  const after = projectScenario(adapted.inputs, 'baze');
   const metrics = compareProjections(before, after, currency);
   addMoneyCalculations(env, metrics.filter((m) => m.key === 'capitalRequired' || m.key === 'minCash'), 'baze', currency);
   return {
     currency,
     scenario: 'baze' as const,
-    currentRequired: before.capital.totalRequired,
-    currentRequiredSq: moneySq(before.capital.totalRequired, currency),
+    currentRequired: adapted.initialTotal,
+    currentRequiredSq: moneySq(adapted.initialTotal, currency),
     targetCapital: input.targetCapital,
     targetCapitalSq: moneySq(input.targetCapital, currency),
-    resultingTotal: reduction.resultingTotal,
-    resultingTotalSq: moneySq(reduction.resultingTotal, currency),
-    reachesTarget: reduction.reachesTarget,
-    changes: reduction.changes.map((c) => ({
-      labelSq: c.labelSq,
-      from: c.from,
-      to: c.to,
-      fromSq: c.lineId === null ? formatNumber(c.from) : moneySq(c.from, currency),
-      toSq: c.lineId === null ? formatNumber(c.to) : moneySq(c.to, currency),
-      reasonSq: c.reasonSq,
-    })),
+    resultingTotal: adapted.resultingTotal,
+    resultingTotalSq: moneySq(adapted.resultingTotal, currency),
+    reachesTarget: adapted.reachesTarget,
+    changesSq: adapted.changesSq,
     metrics,
-    noteSq: reduction.noteSq,
+    noteSq: adapted.noteSq,
+    profileNoteSq: env.ctx.profile ? null : 'Profili nuk është plotësuar; u përdor një profil neutral nga projekti (pa asete të deklaruara).',
     lowCapitalTest: {
       kind: 'supozim',
       zeroCapitalTestSq: archetype.zeroCapitalTestSq,

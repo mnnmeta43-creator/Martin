@@ -51,11 +51,25 @@ interface Place {
 
 function placeOf(code: CountryCode): Place {
   const country = getCountry(code, { includeDemo: true });
-  return { code: code.toUpperCase(), nameSq: country?.nameSq ?? code.toUpperCase(), isDemo: country?.isDemo ?? false };
+  // Use the catalogue's canonical code (e.g. "UNK" → "XKX") so comparisons with the profile hold.
+  return { code: country?.code ?? code.toUpperCase(), nameSq: country?.nameSq ?? code.toUpperCase(), isDemo: country?.isDemo ?? false };
 }
 
+/**
+ * Catalogue names mix definite and indefinite forms ("Kosova", "Gjermani"), so they are always
+ * placed where Albanian keeps the nominative (after a colon or in parentheses), never declined.
+ */
 function areaSq(country: Place, city: string | null): string {
   return city ? `${city} (${country.nameSq})` : country.nameSq;
+}
+
+/** Drops a trailing full stop so a library sentence can be quoted inside another sentence. */
+function inline(text: string): string {
+  return text.trim().replace(/\.$/, '');
+}
+
+function operatingCountrySq(country: Place): string {
+  return `vendin e operimit (${country.nameSq})`;
 }
 
 function registrationSq(a: BusinessArchetype, shape: Shape, country: Place, residence: Place): string {
@@ -64,26 +78,30 @@ function registrationSq(a: BusinessArchetype, shape: Shape, country: Place, resi
   if (shape.remoteOnly && shape.international) {
     return `Për një shërbim online me klientë edhe jashtë vendit, biznesi zakonisht regjistrohet aty ku jetoni dhe keni rezidencën tatimore (sipas profilit: ${residence.nameSq}), jo domosdoshmërisht aty ku janë klientët. ${noTaxShopping} ${VERIFY}`;
   }
+  const away = country.code !== residence.code;
   if (shape.physical) {
-    const away =
-      country.code === residence.code
-        ? ''
-        : ` Ju jetoni në ${residence.nameSq}: verifikoni nëse si jo-rezident mund të regjistroni biznes në ${country.nameSq} dhe me cilat kushte.`;
-    return `Meqë «${a.nameSq}» kryhet fizikisht, biznesi zakonisht regjistrohet në vendin ku kryhet puna: ${country.nameSq}.${away} ${VERIFY}`;
+    const nonResident = away
+      ? ` Vendbanimi juaj sipas profilit është ${residence.nameSq}: verifikoni nëse si jo-rezident mund të regjistroni biznes në ${operatingCountrySq(country)} dhe me cilat kushte.`
+      : '';
+    return `Meqë «${a.nameSq}» kryhet fizikisht, biznesi zakonisht regjistrohet në vendin ku kryhet puna: ${country.nameSq}.${nonResident} ${VERIFY}`;
   }
-  return `Biznesi zakonisht regjistrohet në vendin ku jetoni dhe punoni realisht (sipas profilit: ${residence.nameSq}); nëse po shqyrtoni ${country.nameSq} si vend tjetër, verifikoni nëse keni të drejtë ta regjistroni atje. ${noTaxShopping} ${VERIFY}`;
+  const other = away
+    ? ` Vendi që po shqyrtoni (${country.nameSq}) është tjetër: verifikoni nëse keni të drejtë të regjistroni dhe të operoni biznes atje.`
+    : '';
+  return `Biznesi zakonisht regjistrohet në vendin ku jetoni dhe punoni realisht (sipas profilit: ${residence.nameSq}).${other} ${noTaxShopping} ${VERIFY}`;
 }
 
 function operationSq(shape: Shape, country: Place, city: string | null, profile: UserProfile): string {
-  const declared = profile.operableCountries.map((c) => c.toUpperCase()).includes(country.code);
+  const declared = profile.operableCountries.some((c) => placeOf(c).code === country.code);
   const status = declared
-    ? `Ju e keni deklaruar ${country.nameSq} si vend ku mund të operoni ligjërisht — kjo është vetëdeklarim, aplikacioni nuk e verifikon.`
-    : `Nuk e keni deklaruar ${country.nameSq} si vend ku mund të operoni: verifikoni të drejtën e qëndrimit dhe të punës përpara çdo hapi.`;
+    ? `Sipas profilit, ${country.nameSq} është ndër vendet ku deklaroni se mund të operoni ligjërisht — kjo është vetëdeklarim, aplikacioni nuk e verifikon.`
+    : `${country.nameSq} nuk është ndër vendet ku keni deklaruar se mund të operoni: verifikoni të drejtën e qëndrimit dhe të punës përpara çdo hapi.`;
   if (shape.remoteOnly) {
     return `Puna mund të kryhet në distancë, por vendi ku ndodheni fizikisht kur punoni zakonisht përcakton tatimet dhe të drejtën e punës. ${status}`;
   }
   const premises = shape.needsPremises ? ' Ky aktivitet kërkon ambient, prandaj vlen edhe leja e përdorimit të lokalit.' : '';
-  return `Puna kryhet fizikisht në ${areaSq(country, city)}: aty duhet të keni të drejtë qëndrimi dhe pune, lejet e aktivitetit dhe sigurimet.${premises} ${status}`;
+  const how = shape.physical ? 'Puna kryhet fizikisht' : 'Puna kryhet pjesërisht në distancë dhe pjesërisht në terren, pranë klientëve';
+  return `${how} në zonën ku operoni — ${areaSq(country, city)}: aty duhet të keni të drejtë qëndrimi dhe pune, lejet e aktivitetit dhe sigurimet.${premises} ${status}`;
 }
 
 function customersSq(a: BusinessArchetype, shape: Shape, country: Place, city: string | null, profile: UserProfile): string {
@@ -91,9 +109,9 @@ function customersSq(a: BusinessArchetype, shape: Shape, country: Place, city: s
   const who = b2b ? 'Klientët janë kryesisht biznese' : 'Klientët janë kryesisht individë';
   if (shape.international) {
     const targets = profile.targetCountries
-      .map((c) => c.toUpperCase())
-      .filter((c) => c !== country.code)
-      .map((c) => placeOf(c).nameSq);
+      .map(placeOf)
+      .filter((p) => p.code !== country.code)
+      .map((p) => p.nameSq);
     const where = targets.length > 0 ? ` (sipas profilit: ${targets.join(', ')})` : '';
     return `${who} dhe mund të jenë edhe në vende të tjera${where}. Kjo sjell pyetje për TVSH-në e shërbimeve ndërkufitare, monedhën e faturimit, pagesat ndërkombëtare dhe rregullat e konsumatorit e të të dhënave në vendin e klientit. ${VERIFY}`;
   }
@@ -102,10 +120,10 @@ function customersSq(a: BusinessArchetype, shape: Shape, country: Place, city: s
 
 function verificationList(a: BusinessArchetype, shape: Shape, country: Place): string[] {
   const items = [
-    `E drejta juaj për të qëndruar dhe për të punuar si i vetëpunësuar ose pronar biznesi në ${country.nameSq} (leje qëndrimi/pune nëse nuk jeni shtetas). Mos supozoni se mund të regjistroheni, punoni ose zhvendoseni kudo. ${VERIFY}`,
-    `Nëse jo-rezidentët mund të regjistrojnë biznes në ${country.nameSq} dhe me cilat kushte (adresë vendore, përfaqësues, numër identifikimi tatimor). ${VERIFY}`,
+    `E drejta juaj për të qëndruar dhe për të punuar si i vetëpunësuar ose pronar biznesi në ${operatingCountrySq(country)} (leje qëndrimi/pune nëse nuk jeni shtetas). Mos supozoni se mund të regjistroheni, punoni ose zhvendoseni kudo. ${VERIFY}`,
+    `Nëse jo-rezidentët mund të regjistrojnë biznes në ${operatingCountrySq(country)} dhe me cilat kushte (adresë vendore, përfaqësues, numër identifikimi tatimor). ${VERIFY}`,
     `Rezidenca juaj tatimore: ku tatoheni ju personalisht dhe ku tatohet biznesi, sidomos nëse jetoni në një vend dhe regjistroheni ose keni klientë në një tjetër. Verifikojeni me administratën tatimore ose me një këshilltar tatimor të licencuar. ${VERIFY}`,
-    `Hapja e llogarisë bankare të biznesit dhe disponueshmëria e pagesave me kartë ose online për biznesin tuaj në ${country.nameSq} — jo çdo shërbim pagesash funksionon në çdo vend. ${VERIFY}`,
+    `Hapja e llogarisë bankare të biznesit dhe disponueshmëria e pagesave me kartë ose online për biznesin tuaj në ${operatingCountrySq(country)} — jo çdo shërbim pagesash funksionon në çdo vend. ${VERIFY}`,
     a.regulated
       ? `Licencat dhe lejet e aktivitetit për «${a.nameSq}»${a.licensedProfessionalsSq.length > 0 ? `, si dhe profesionistët e licencuar që duhen (${a.licensedProfessionalsSq.join(', ')})` : ''}. ${VERIFY}`
       : `Kodi i veprimtarisë, lejet e bashkisë dhe çdo licencë që mund të kërkohet për «${a.nameSq}». ${VERIFY}`,
@@ -139,7 +157,7 @@ function competitorStep(a: BusinessArchetype, shape: Shape, area: string): Field
   const types = a.competitorTypesSq.slice(0, 3).join('; ');
   const how = shape.remoteOnly
     ? `Kërkoni në motorët e kërkimit, tregjet online dhe hartat online alternativat e këtyre llojeve: ${types}. Shënoni edhe ato që klientët përmendin në biseda.`
-    : `Kërkoni në hartat online alternativat brenda zonës ${area} (${types}), pastaj ecni në këmbë zonën për të gjetur ato që nuk shfaqen online.`;
+    : `Kërkoni në hartat online alternativat brenda zonës që po shqyrtoni (${area}): ${types}. Pastaj ecni në këmbë zonën për të gjetur ato që nuk shfaqen online.`;
   return {
     stepSq: 'Numëroni konkurrentët dhe alternativat',
     howSq: how,
@@ -160,7 +178,7 @@ function priceStep(a: BusinessArchetype): FieldStep {
 function footTrafficStep(area: string): FieldStep {
   return {
     stepSq: 'Numëroni kalimtarët dhe klientët e alternativave',
-    howSq: `Në pikat që ju interesojnë në ${area}, numëroni për 30 minuta njerëzit që kalojnë ose hyjnë te alternativat, në 3 orare (mëngjes, mesditë, mbrëmje) dhe në 2 ditë të ndryshme (një ditë pune dhe një ditë fundjave).`,
+    howSq: `Në pikat që ju interesojnë (${area}), numëroni për 30 minuta njerëzit që kalojnë ose hyjnë te alternativat, në 3 orare (mëngjes, mesditë, mbrëmje) dhe në 2 ditë të ndryshme (një ditë pune dhe një ditë fundjave).`,
     outputSq: '6 numërime të dokumentuara me datë, orë dhe vend.',
     costSq: 'Kohë (rreth 3 orë gjithsej).',
   };
@@ -169,7 +187,7 @@ function footTrafficStep(area: string): FieldStep {
 function rentStep(area: string): FieldStep {
   return {
     stepSq: 'Merrni 3 oferta qiraje',
-    howSq: `Kërkoni të paktën 3 oferta reale qiraje për ambiente të përshtatshme në ${area}; pyesni për depozitën, kohëzgjatjen e kontratës, kush paguan rregullimet dhe nëse lejohet ky aktivitet në lokal.`,
+    howSq: `Kërkoni të paktën 3 oferta reale qiraje për ambiente të përshtatshme në zonën që po shqyrtoni (${area}); pyesni për depozitën, kohëzgjatjen e kontratës, kush paguan rregullimet dhe nëse lejohet ky aktivitet në lokal.`,
     outputSq: '3 oferta me shkrim me çmim, sipërfaqe, depozitë dhe kushte — futini në modelin financiar si «ofertë».',
     costSq: 'Kohë; disa agjenci marrin tarifë — pyesni paraprakisht.',
   };
@@ -178,7 +196,7 @@ function rentStep(area: string): FieldStep {
 function licensingStep(a: BusinessArchetype, area: string): FieldStep {
   return {
     stepSq: 'Vizitoni zyrën e licencimit të bashkisë',
-    howSq: `Pyesni në zyrën e bashkisë ose në sportelin e biznesit në ${area} çfarë lejesh, kodesh veprimtarie dhe inspektimesh kërkohen për «${a.nameSq}»; kërkoni listën me shkrim ose lidhjen zyrtare.`,
+    howSq: `Pyesni në zyrën e bashkisë ose në sportelin e biznesit të zonës që po shqyrtoni (${area}) çfarë lejesh, kodesh veprimtarie dhe inspektimesh kërkohen për «${a.nameSq}»; kërkoni listën me shkrim ose lidhjen zyrtare.`,
     outputSq: 'Listë dokumentesh, tarifash dhe afatesh, me burimin zyrtar dhe datën.',
     costSq: 'Kohë; tarifat zyrtare paguhen vetëm kur aplikoni.',
   };
@@ -187,7 +205,7 @@ function licensingStep(a: BusinessArchetype, area: string): FieldStep {
 function conversationsStep(a: BusinessArchetype): FieldStep {
   return {
     stepSq: 'Bisedoni me të paktën 10 klientë të mundshëm',
-    howSq: `Bisedoni me të paktën 10 persona nga grupi «${a.payingCustomerSq}» me pyetjet për sjelljen e kaluar nga kompleti i validimit; mos e prezantoni idenë tuaj në fillim të bisedës.`,
+    howSq: `Bisedoni me të paktën 10 persona nga grupi «${inline(a.payingCustomerSq)}» me pyetjet për sjelljen e kaluar nga kompleti i validimit; mos e prezantoni idenë tuaj në fillim të bisedës.`,
     outputSq: 'Shënime për çdo bisedë: problemi, si e zgjidhin sot, sa paguajnë sot dhe kush vendos.',
     costSq: 'Kohë; ndoshta transport ose një kafe.',
   };
@@ -207,7 +225,7 @@ function suppliersStep(a: BusinessArchetype): FieldStep {
 function channelsStep(a: BusinessArchetype): FieldStep {
   return {
     stepSq: 'Vëzhgoni kanalet ku klientët kërkojnë zgjidhje',
-    howSq: `Identifikoni 5 kanale (grupe profesionale, tregje online, forume, shoqata) ku persona nga grupi «${a.payingCustomerSq}» kërkojnë këtë lloj zgjidhjeje; për 2 javë numëroni kërkesat publike që shfaqen, pa dërguar mesazhe masive.`,
+    howSq: `Identifikoni 5 kanale (grupe profesionale, tregje online, forume, shoqata) ku persona nga grupi «${inline(a.payingCustomerSq)}» kërkojnë këtë lloj zgjidhjeje; për 2 javë numëroni kërkesat publike që shfaqen, pa dërguar mesazhe masive.`,
     outputSq: 'Listë kanalesh me numrin e kërkesave të vëzhguara dhe shembuj të fjalëve që përdorin klientët.',
     costSq: 'Kohë.',
   };

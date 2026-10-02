@@ -125,8 +125,8 @@ function withRef(text: string, id: string | null): string {
 function renderWhy(data: Data<typeof getProjectSummary>): string {
   const idea = data.idea;
   const lines = [`Pse „${idea?.nameSq ?? data.project.title}” mund të ketë kuptim në ${data.project.countryNameSq}${data.project.isDemo ? ' (DEMO — të dhëna fiktive)' : ''}:`];
-  const seen = new Set<string>();
-  const claims = [...(data.analysis?.whyWork ?? []), ...(data.analysis?.macro ?? [])].filter((c) => !seen.has(c.textSq) && seen.add(c.textSq));
+  const allClaims = [...(data.analysis?.whyWork ?? []), ...(data.analysis?.macro ?? [])];
+  const claims = allClaims.filter((c, i) => allClaims.findIndex((o) => o.textSq === c.textSq) === i);
   lines.push('', 'Çfarë thonë analizat e aplikacionit:');
   if (claims.length === 0) lines.push(`• ${data.analysisNoteSq ?? 'Nuk ka ende pretendime të mbështetura nga të dhënat e ruajtura për këtë vend.'}`);
   for (const c of claims.slice(0, 6)) lines.push(`• ${c.textSq} ${refs(c.citations)} (${c.kindSq}; ${c.labelSq})`.replace(/ {2,}/g, ' '));
@@ -159,12 +159,13 @@ function renderAdapt(data: Data<typeof adaptToCapital>, defaulted: boolean): str
     '',
     'Ndryshimet e sugjeruara:',
   ];
-  if (data.changes.length === 0) lines.push('• Asnjë zë nuk u ul.');
-  data.changes.forEach((c, i) => lines.push(`${i + 1}. ${c.labelSq}: ${c.fromSq} → ${c.toSq}. ${c.reasonSq}`));
+  if (data.changesSq.length === 0) lines.push('• Asnjë zë nuk u ul.');
+  data.changesSq.forEach((c, i) => lines.push(`${i + 1}. ${c}`));
   lines.push(
     '',
     `Rezultati: ${data.resultingTotalSq} — ${data.reachesTarget ? 'brenda objektivit.' : 'ende mbi objektivin.'}`,
     data.noteSq,
+    ...(data.profileNoteSq ? [data.profileNoteSq] : []),
     '',
     `Test me kapital minimal (supozim i bibliotekës): ${data.lowCapitalTest.zeroCapitalTestSq}`,
     '',

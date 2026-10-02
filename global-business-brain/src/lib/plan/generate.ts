@@ -232,7 +232,7 @@ function phase40(c: Ctx): PhaseText {
       : [];
   return {
     actionsSq: [
-      `Verifikoni formën e regjistrimit dhe faturimin për veprimtarinë në ${c.area}. ${VERIFY}`,
+      `Verifikoni formën e regjistrimit dhe faturimin për veprimtarinë në zonën ku do të operoni (${c.area}). ${VERIFY}`,
       ...a.regulationNotesSq,
       ...pros,
       `Verifikoni tatimet, kontributet shoqërore dhe sigurimet përpara klientit të parë me pagesë. ${VERIFY}`,
@@ -241,7 +241,7 @@ function phase40(c: Ctx): PhaseText {
     outputSq: 'Listë e verifikuar regjistrimesh, lejesh, tarifash dhe detyrimesh, secila me burimin zyrtar dhe datën.',
     proofOfCompletionSq: 'Çdo detyrim ka burim zyrtar ose konfirmim me shkrim nga një profesionist; regjistrimi është bërë ose ka datë të caktuar.',
     continueCriterionSq: 'Të gjitha lejet e nevojshme janë të arritshme brenda kohës dhe buxhetit që keni.',
-    stopCriterionSq: `Nuk keni të drejtë ligjore të punoni ose të regjistroheni në ${c.countryNameSq}, ose aktiviteti kërkon një licencë ose profesionist që nuk mund ta siguroni.`,
+    stopCriterionSq: `Nuk keni të drejtë ligjore të punoni ose të regjistroheni në vendin e operimit (${c.countryNameSq}), ose aktiviteti kërkon një licencë ose profesionist që nuk mund ta siguroni.`,
   };
 }
 
@@ -422,7 +422,7 @@ function tasks30(c: Ctx): TaskText[] {
 function tasks40(c: Ctx): TaskText[] {
   const pros = c.a.licensedProfessionalsSq.length > 0 ? ` Profesionistë të licencuar: ${joinSq(c.a.licensedProfessionalsSq)}.` : '';
   return [
-    { titleSq: 'Verifikoni formën e regjistrimit dhe faturimin', descriptionSq: `Në burimet zyrtare për ${c.countryNameSq}. ${VERIFY}`, proofSq: 'Burimi zyrtar dhe data e verifikimit.' },
+    { titleSq: 'Verifikoni formën e regjistrimit dhe faturimin', descriptionSq: `Në burimet zyrtare të vendit të operimit (${c.countryNameSq}). ${VERIFY}`, proofSq: 'Burimi zyrtar dhe data e verifikimit.' },
     { titleSq: 'Verifikoni lejet dhe licencat e aktivitetit', descriptionSq: withVerify(`${c.a.regulationNotesSq.join(' ')}${pros}`), proofSq: 'Lista e lejeve me burimin zyrtar.' },
     { titleSq: 'Verifikoni tatimet, kontributet dhe sigurimet', descriptionSq: `Pyesni administratën tatimore ose një profesionist të licencuar. ${VERIFY}`, proofSq: 'Shënim me detyrimet dhe burimin e tyre.' },
     { titleSq: 'Verifikoni rregullat për të dhënat personale dhe konsumatorin', descriptionSq: `Nëse ruani kontakte ose të dhëna pagese të klientëve, verifikoni pëlqimin dhe ruajtjen e sigurt. ${VERIFY}`, proofSq: 'Shënim me rregullat që zbatoni.' },
