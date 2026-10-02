@@ -86,6 +86,7 @@ export const SOURCES: DataSourceInfo[] = [
     notesSq: [
       NOT_VERIFIED_LIVE_SQ,
       'Vlerat për vitin aktual dhe vitet e ardhshme janë parashikime dhe shfaqen gjithmonë me etiketën “parashikim”, jo si matje.',
+      'Rregull konservativ i aplikacionit: çdo vit i barabartë me vitin kalendarik aktual ose më vonë shënohet “parashikim”. WEO i shënon vlerësimet që nga viti i fundit me të dhëna aktuale të secilit vend, i cili mund të jetë më i hershëm, ndaj vlerat e viteve të fundit mund të jenë ende vlerësime të FMN-së.',
     ],
   },
   {

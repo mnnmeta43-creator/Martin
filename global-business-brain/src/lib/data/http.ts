@@ -137,8 +137,8 @@ export interface FetchJsonOptions {
   maxRetryAfterMs?: number;
   /** Jitter source in [0, 1). Defaults to 0 when `sleep` is injected, so tests get exact delays. */
   random?: () => number;
-  /** Clock used to interpret an HTTP-date Retry-After. */
-  now?: () => number;
+  /** Clock (epoch ms) used to interpret an HTTP-date Retry-After. */
+  nowMs?: () => number;
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000;
@@ -272,7 +272,7 @@ export async function fetchJson<T = unknown>(url: string, opts: FetchJsonOptions
   const retries = Math.max(0, opts.retries ?? DEFAULT_RETRIES);
   const sleep = opts.sleep ?? realSleep;
   const random = opts.random ?? (opts.sleep ? () => 0 : Math.random);
-  const nowMs = opts.now ?? Date.now;
+  const nowMs = opts.nowMs ?? Date.now;
   const baseDelay = opts.baseDelayMs ?? DEFAULT_BASE_DELAY_MS;
   const maxRetryAfter = opts.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
 

@@ -46,17 +46,17 @@ export function AppShell({ children, user, demoMode }: { children: React.ReactNo
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
             <Link href="/" className="flex items-center gap-2 lg:hidden">
               <Logo />
-              <span className="text-sm font-semibold text-ink">Global Business Brain</span>
+              <span className="text-sm font-semibold leading-tight text-ink">Global Business Brain</span>
             </Link>
             <div className="hidden text-sm text-muted lg:block">Zbulo ku ka mundësi. Kupto pse. Ndërto biznesin nga zero.</div>
             <div className="flex items-center gap-2">
               {demoMode ? (
                 <Link
                   href="/burimet#demo"
-                  className="rounded-full border border-demo/50 bg-demo-soft px-2.5 py-1 text-xs font-semibold text-demo"
+                  className="whitespace-nowrap rounded-full border border-demo/50 bg-demo-soft px-2.5 py-1 text-xs font-semibold text-demo"
                   title="Modaliteti DEMO: ekonomitë fiktive ZZA/ZZB/ZZC janë aktive"
                 >
-                  ◆ DEMO aktiv
+                  ◆ DEMO<span className="hidden sm:inline"> aktiv</span>
                 </Link>
               ) : null}
               {user && !user.isGuest ? (
