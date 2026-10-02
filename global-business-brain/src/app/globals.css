@@ -26,6 +26,12 @@
   --color-bad-soft: #3a1414;
   --color-demo: #c084fc;
   --color-demo-soft: #2a1640;
+  /* Chart series slots (validated for CVD separation on the dark surface #0b1220). */
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
+  --color-chart-3: #199e70;
+  --color-chart-neg: #e66767;
+  --color-chart-grid: #1c2740;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }

@@ -58,3 +58,12 @@ To run the Netlify Functions locally, use the [Netlify CLI](https://docs.netlify
 ```bash
 netlify dev
 ```
+
+---
+
+## Global Business Brain (aplikacion i ri)
+
+Në dosjen [`global-business-brain/`](global-business-brain/) ndodhet aplikacioni **Global Business Brain**
+(Next.js + TypeScript + Tailwind + PostgreSQL), i pavarur nga faqja Voltex më sipër. Konfigurimi i
+Netlify-t në rrënjë të depos (`netlify.toml`) vazhdon të publikojë vetëm faqen Voltex; aplikacioni i ri
+nuk publikohet pa miratim. Shihni [`global-business-brain/README.md`](global-business-brain/README.md).
