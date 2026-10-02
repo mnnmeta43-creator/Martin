@@ -176,11 +176,19 @@ export function currencyMinorUnits(code: CurrencyCode): number {
   }
 }
 
-/** Rounds half away from zero to the currency's minor unit, avoiding binary artefacts (1.005 → 1.01). */
+/**
+ * Rounds half away from zero to the currency's minor unit, avoiding binary artefacts (1.005 → 1.01).
+ * The decimal-string shift needs the plain notation JavaScript only prints between 1e-6 and 1e21, so
+ * values below half a minor unit (float noise) return 0 and values with no fractional precision
+ * left (≥ 2^53 minor units) are returned unchanged.
+ */
 export function roundMoney(value: number, currency: CurrencyCode): number {
   if (!Number.isFinite(value)) return value;
   const digits = currencyMinorUnits(currency);
-  const magnitude = Math.round(Number(`${Math.abs(value)}e${digits}`));
+  const abs = Math.abs(value);
+  if (abs < 0.5 * 10 ** -digits) return 0;
+  if (abs * 10 ** digits >= Number.MAX_SAFE_INTEGER) return value;
+  const magnitude = Math.round(Number(`${abs}e${digits}`));
   const rounded = Number(`${magnitude}e-${digits}`);
   return value < 0 && rounded !== 0 ? -rounded : rounded;
 }

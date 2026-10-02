@@ -123,6 +123,15 @@ describe('sessions', () => {
     expect(await ctx.store.sessions.findByTokenHash(hashToken(token))).toBeNull();
   });
 
+  it('removes other expired sessions whenever a new session is created', async () => {
+    const stale = await ctx.store.users.createGuest();
+    const { token: staleToken } = await createSession(ctx.store, stale.id, new Date('2025-01-01T00:00:00.000Z'));
+    const fresh = await ctx.store.users.createGuest();
+    const { token } = await createSession(ctx.store, fresh.id, new Date('2025-03-01T00:00:00.000Z'));
+    expect(await ctx.store.sessions.findByTokenHash(hashToken(staleToken))).toBeNull();
+    expect(await ctx.store.sessions.findByTokenHash(hashToken(token))).not.toBeNull();
+  });
+
   it('verifies credentials only for registered accounts with the right password', async () => {
     const email = `kredenciale-${Date.now()}@example.invalid`;
     const user = await ctx.store.users.create(email, await hashPassword('fjalekalim-shume-i-forte'));

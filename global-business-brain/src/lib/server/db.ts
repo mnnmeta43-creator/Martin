@@ -16,6 +16,7 @@ import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { getEnv, type AppEnv } from '@/lib/server/env';
+import { EMBEDDED_MIGRATIONS } from '@/lib/server/migrations.generated';
 import { ConfigError } from '@/lib/server/errors';
 import { logger } from '@/lib/server/logger';
 
@@ -190,10 +191,13 @@ function sha256(text: string): string {
  * instances booting at once). Re-running is a no-op.
  */
 export async function runMigrations(db: Db, options: { dir?: string } = {}): Promise<MigrationResult> {
-  const dir = options.dir ?? defaultMigrationsDir();
-  const files = readdirSync(dir)
-    .filter((f) => MIGRATION_FILE.test(f))
-    .sort();
+  // Default: SQL embedded at build time (serverless bundles do not ship db/migrations).
+  const migrations = options.dir
+    ? readdirSync(options.dir)
+        .filter((f) => MIGRATION_FILE.test(f))
+        .sort()
+        .map((id) => ({ id, sql: readFileSync(path.join(options.dir as string, id), 'utf8') }))
+    : EMBEDDED_MIGRATIONS;
   return db.transaction(async (tx) => {
     if (tx.kind === 'postgres') await tx.query('SELECT pg_advisory_xact_lock($1)', [MIGRATION_LOCK_KEY]);
     await tx.exec(
@@ -206,8 +210,7 @@ export async function runMigrations(db: Db, options: { dir?: string } = {}): Pro
     const { rows } = await tx.query<{ id: string; checksum: string }>('SELECT id, checksum FROM schema_migrations');
     const done = new Map(rows.map((r) => [r.id, r.checksum]));
     const result: MigrationResult = { applied: [], alreadyApplied: [] };
-    for (const file of files) {
-      const sql = readFileSync(path.join(dir, file), 'utf8');
+    for (const { id: file, sql } of migrations) {
       const checksum = sha256(sql);
       const previous = done.get(file);
       if (previous !== undefined) {
@@ -251,8 +254,18 @@ function holder(): DbHolder {
   return g[HOLDER_KEY];
 }
 
+/**
+ * Netlify Database exposes its connection string as NETLIFY_DB_URL (through the platform's env
+ * accessor on Netlify, and process.env elsewhere). DATABASE_URL always wins.
+ */
+async function netlifyDatabaseUrl(): Promise<string | undefined> {
+  const platform = (globalThis as { Netlify?: { env?: { get(key: string): string | undefined } } }).Netlify;
+  return platform?.env?.get('NETLIFY_DB_URL') || process.env.NETLIFY_DB_URL || undefined;
+}
+
 async function openConfiguredDb(): Promise<Db> {
-  const target = resolveDbTarget(getEnv());
+  const env = getEnv();
+  const target = resolveDbTarget({ ...env, DATABASE_URL: env.DATABASE_URL ?? (await netlifyDatabaseUrl()) });
   const db = target.kind === 'postgres' ? createPgDb(target.url) : await createPgliteDb(target.dataDir);
   try {
     const result = await runMigrations(db);

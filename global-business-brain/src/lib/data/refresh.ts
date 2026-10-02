@@ -74,8 +74,10 @@ export interface RefreshReport {
   startedAt: IsoTimestamp;
   finishedAt: IsoTimestamp;
   results: RefreshResult[];
+  /** 'ok' plus 'pjesshem' (partial: some country batches failed, the rest were stored). */
   okCount: number;
   errorCount: number;
+  /** Still fresh, unknown source, or switched off by the circuit breaker. */
   skippedCount: number;
 }
 
@@ -105,10 +107,11 @@ function freshSkipMessage(sourceId: string, log: FetchLogEntry | undefined, now:
   if (!log || log.status !== 'ok') return null;
   const hours = getSource(sourceId)?.refreshEveryHours;
   if (!hours) return null;
-  const at = Date.parse(log.finishedAt ?? log.startedAt);
+  const finished = log.finishedAt ?? log.startedAt;
+  const at = Date.parse(finished);
   if (!Number.isFinite(at)) return null;
   if (now.getTime() - at >= hours * 3_600_000) return null;
-  return `Ende i freskët: rifreskimi i fundit i suksesshëm ishte më ${formatDateTime(new Date(at).toISOString())}; kontrollohet sërish pas ${hours} orësh.`;
+  return `Ende i freskët: rifreskimi i fundit i suksesshëm ishte më ${formatDateTime(finished)}; kontrollohet sërish pas ${hours} orësh.`;
 }
 
 function failureMessageSq(err: unknown): string {

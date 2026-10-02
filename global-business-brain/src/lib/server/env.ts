@@ -71,75 +71,116 @@ export function resetEnvCache(): void {
 export interface ConfigStatusItem {
   key: string;
   present: boolean;
+  /** Full Albanian sentence describing what works because the key is set. */
   enablesSq: string;
+  /** Full Albanian sentence describing what happens while the key is missing. */
   impactIfMissingSq: string;
+  /**
+   * True when the missing key switches a feature off (AI chat, automatic refresh, accounts in
+   * production). False for keys that simply fall back to a sensible default.
+   */
+  featureOffWhenMissing: boolean;
 }
 
 function isPresent(source: RawEnv, key: string): boolean {
   return blankToUndefined(source[key]) !== undefined;
 }
 
-function databaseImpactSq(source: RawEnv): string {
+function isProductionEnv(source: RawEnv): boolean {
   const nodeEnv = blankToUndefined(source.NODE_ENV) ?? 'development';
-  const production = nodeEnv !== 'development' && nodeEnv !== 'test';
-  const embeddedAllowed = blankToUndefined(source.ALLOW_EMBEDDED_DB) === 'true';
-  if (!production) {
-    return 'Në zhvillim përdoret databaza e brendshme PGlite (PGLITE_DATA_DIR). Në prodhim, pa DATABASE_URL llogaritë, profilet dhe projektet nuk funksionojnë.';
+  // Mirrors parseEnv: anything other than development/test is treated as production.
+  return nodeEnv !== 'development' && nodeEnv !== 'test';
+}
+
+function databaseImpact(source: RawEnv): { impactIfMissingSq: string; featureOffWhenMissing: boolean } {
+  if (!isProductionEnv(source)) {
+    return {
+      impactIfMissingSq:
+        'Në zhvillim përdoret databaza e brendshme PGlite (dosja PGLITE_DATA_DIR). Në prodhim, pa DATABASE_URL, llogaritë, profilet dhe projektet nuk funksionojnë.',
+      featureOffWhenMissing: false,
+    };
   }
-  if (embeddedAllowed) {
-    return 'Përdoret databaza e brendshme PGlite sepse ALLOW_EMBEDDED_DB=true. Kjo është vetëm për demonstrim ose teste; të dhënat nuk janë të përshtatshme për përdorim real.';
+  if (blankToUndefined(source.ALLOW_EMBEDDED_DB) === 'true') {
+    return {
+      impactIfMissingSq:
+        'Përdoret databaza e brendshme PGlite sepse ALLOW_EMBEDDED_DB=true. Kjo është vetëm për demonstrim ose teste, jo për përdorim real.',
+      featureOffWhenMissing: false,
+    };
   }
-  return 'Llogaritë, profilet, projektet, plani, provat nga klientët, historia e bisedës dhe ruajtja e të dhënave makroekonomike NUK funksionojnë.';
+  return {
+    impactIfMissingSq:
+      'Llogaritë, profilet, projektet, plani 0–100, provat nga klientët, historia e bisedës dhe ruajtja e të dhënave makroekonomike NUK funksionojnë.',
+    featureOffWhenMissing: true,
+  };
 }
 
 /**
  * Which optional features are configured. Reads raw presence (so it works even when a value is
- * invalid) and never returns any value, only `present: boolean`.
+ * invalid) and never returns any value, only `present: boolean` and fixed Albanian explanations.
  */
 export function configStatus(source: RawEnv = process.env): ConfigStatusItem[] {
-  const item = (key: string, enablesSq: string, impactIfMissingSq: string): ConfigStatusItem => ({
+  const item = (key: string, enablesSq: string, impactIfMissingSq: string, featureOffWhenMissing: boolean): ConfigStatusItem => ({
     key,
     present: isPresent(source, key),
     enablesSq,
     impactIfMissingSq,
+    featureOffWhenMissing,
   });
+  const database = databaseImpact(source);
   return [
     item(
       'DATABASE_URL',
-      'Ruajtjen e llogarive, profileve, projekteve, planeve dhe të dhënave në PostgreSQL.',
-      databaseImpactSq(source),
+      'Llogaritë, profilet, projektet, planet dhe të dhënat makroekonomike ruhen në PostgreSQL.',
+      database.impactIfMissingSq,
+      database.featureOffWhenMissing,
     ),
     item(
       'DATA_MODE',
-      'Zgjedh modalitetin: "live" (burime reale) ose "demo" (ekonomitë fiktive ZZA, ZZB, ZZC, të shënuara DEMO).',
-      'Përdoret "live": vetëm të dhëna reale nga burimet e regjistruara.',
+      'Modaliteti i të dhënave është zgjedhur shprehimisht: "live" (burime reale) ose "demo" (ekonomitë fiktive ZZA, ZZB, ZZC, të shënuara DEMO).',
+      'Përdoret modaliteti "live": vetëm të dhëna reale nga burimet e regjistruara.',
+      false,
     ),
     item(
       'ANTHROPIC_API_KEY',
-      'Bisedën e lirë me asistentin AI (Claude).',
+      'Biseda e lirë me asistentin AI (Claude) është aktive. Shifrat financiare vijnë gjithmonë nga motori determinist i aplikacionit.',
       'Biseda me AI është e çaktivizuar. Përgjigjet deterministe (kalkulatori, plani, të dhënat e ruajtura) vazhdojnë të funksionojnë.',
+      true,
     ),
-    item('ANTHROPIC_MODEL', 'Zgjedh modelin e Claude për asistentin.', 'Përdoret modeli i parazgjedhur i aplikacionit.'),
+    item(
+      'ANTHROPIC_MODEL',
+      'Asistenti përdor modelin e Claude të zgjedhur në konfigurim.',
+      'Përdoret modeli i parazgjedhur i aplikacionit.',
+      false,
+    ),
     item(
       'CRON_SECRET',
-      'Endpoint-in e rifreskimit automatik të të dhënave (POST /api/cron/refresh).',
-      'Rifreskimi automatik është i çaktivizuar. Të dhënat mund të rifreskohen me "npm run data:refresh".',
+      'Rifreskimi automatik i të dhënave është aktiv: një planifikues mund të thërrasë POST /api/cron/refresh me këtë sekret.',
+      'Rifreskimi automatik është i çaktivizuar. Të dhënat mund të rifreskohen me "npm run data:refresh" në server.',
+      true,
     ),
     item(
       'FX_API_BASE_URL',
-      'Një adresë alternative për API-në e kurseve të këmbimit.',
+      'Kurset e këmbimit merren nga adresa alternative e konfiguruar.',
       'Përdoret adresa e parazgjedhur e burimit të kurseve të këmbimit.',
+      false,
     ),
     item(
       'APP_URL',
-      'Kontrollin e origjinës me URL-në publike të aplikacionit (kur aplikacioni është pas një proxy).',
+      'Kontrolli i origjinës pranon edhe URL-në publike të aplikacionit (e dobishme kur aplikacioni është pas një proxy).',
       'Origjina kontrollohet me hostin e kërkesës; kjo mjafton në shumicën e rasteve.',
+      false,
     ),
     item(
       'ALLOW_EMBEDDED_DB',
-      'Lejon databazën e brendshme PGlite edhe në prodhim (vetëm për demonstrim ose teste).',
-      'Në prodhim kërkohet DATABASE_URL.',
+      'Databaza e brendshme PGlite lejohet edhe në prodhim (vetëm për demonstrim ose teste).',
+      'Në prodhim kërkohet DATABASE_URL; databaza e brendshme përdoret vetëm gjatë zhvillimit.',
+      false,
     ),
-    item('PGLITE_DATA_DIR', 'Dosjen ku PGlite ruan të dhënat gjatë zhvillimit.', 'Përdoret dosja ".data/pglite".'),
+    item(
+      'PGLITE_DATA_DIR',
+      'PGlite i ruan të dhënat në dosjen e zgjedhur (ose vetëm në memorie me "memory://").',
+      'PGlite përdor dosjen e parazgjedhur ".data/pglite".',
+      false,
+    ),
   ];
 }

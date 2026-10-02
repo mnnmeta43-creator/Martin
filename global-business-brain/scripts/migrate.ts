@@ -12,6 +12,8 @@ import { ConfigError } from '@/lib/server/errors';
 import { maskString } from '@/lib/server/logger';
 
 function loadEnvFiles(): void {
+  // process.loadEnvFile exists from Node 20.12; older 20.x simply relies on the real environment.
+  if (typeof process.loadEnvFile !== 'function') return;
   for (const file of ['.env.local', '.env']) {
     const full = path.join(process.cwd(), file);
     // process.loadEnvFile does not overwrite variables that are already set.

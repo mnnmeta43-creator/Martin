@@ -245,10 +245,22 @@ describe('warnings', () => {
     expect(r.warningsSq.some((w) => w.includes('para muajit të parë'))).toBe(true);
   });
 
-  it('warns about non-positive contribution', () => {
-    const r = projectScenario(makeInputs({ pricePerUnit: 4 }), 'baze');
-    expect(r.unitEconomics.status).toBe('kontribut_zero_ose_negativ');
-    expect(r.warningsSq.some((w) => w.startsWith('Kontributi për njësi është zero ose negativ'))).toBe(true);
+  it('warns about zero contribution: more sales change nothing (they do not make it worse)', () => {
+    // price = variable cost = 4: net −360 and min cash −260 with 10 customers and with 100.
+    const ten = projectScenario(makeInputs({ pricePerUnit: 4 }), 'baze');
+    const hundred = projectScenario(makeInputs({ pricePerUnit: 4 }, { startCustomers: 100 }), 'baze');
+    expect(ten.unitEconomics.status).toBe('kontribut_zero_ose_negativ');
+    expect(hundred.totals.netResult).toBe(ten.totals.netResult);
+    const warning = ten.warningsSq.find((w) => w.startsWith('Kontributi për njësi është zero'));
+    expect(warning).toContain('Më shumë shitje nuk e ndryshojnë rezultatin');
+    expect(warning).not.toContain('e përkeqësojnë');
+  });
+
+  it('warns about negative contribution: more sales make it worse', () => {
+    const r = projectScenario(makeInputs({ pricePerUnit: 3 }), 'baze');
+    const warning = r.warningsSq.find((w) => w.startsWith('Kontributi për njësi është negativ'));
+    expect(warning).toContain('më shumë shitje e përkeqësojnë situatën');
+    expect(warning).toContain('kapitali shtesë');
   });
 
   it('warns about zero customers', () => {
@@ -304,5 +316,91 @@ describe('spreadByLag', () => {
     // lag 1.5: each amount → 50% one month later, 50% two months later
     expect(spreadByLag([100, 100, 100], 1.5)).toEqual([0, 50, 100]);
     expect(spreadByLag([100, 100, 100], 0)).toEqual([100, 100, 100]);
+  });
+});
+
+describe('review regressions — warnings', () => {
+  it('flags an owner salary that is ticked as included but is 0', () => {
+    const zero = projectScenario(makeInputs({ includeOwnerSalary: true, ownerSalaryMonthly: 0 }), 'baze');
+    expect(zero.warningsSq.some((w) => w.startsWith('Paga e pronarit është 0'))).toBe(true);
+    const invalid = projectScenario(makeInputs({ includeOwnerSalary: true, ownerSalaryMonthly: Number.NaN }), 'baze');
+    expect(invalid.warningsSq.some((w) => w.startsWith('Paga e pronarit është 0'))).toBe(true);
+    const paid = projectScenario(makeInputs({ includeOwnerSalary: true, ownerSalaryMonthly: 20 }), 'baze');
+    expect(paid.warningsSq.some((w) => w.startsWith('Paga e pronarit'))).toBe(false);
+  });
+
+  it('counts month 0 among the months with negative cash, like minCashMonth does', () => {
+    // Opening cash 50 − 100 = −50; balances −20, 10, 40, … → months 0 and 1 are negative.
+    const r = projectScenario(makeInputs({ ownCapital: 50 }), 'baze');
+    expect(r.minCashMonth).toBe(0);
+    expect(r.rows[0].cashBalance).toBe(-20);
+    expect(r.monthsWithNegativeCash).toBe(2);
+  });
+
+  it('warns about supplier payment terms above 60 days', () => {
+    const long = projectScenario(makeInputs({ supplierPaymentDays: 61 }), 'baze');
+    expect(long.warningsSq.some((w) => w.startsWith('Ju i paguani furnitorët pas 61 ditësh — më shumë se 60 ditë'))).toBe(true);
+    expect(projectScenario(makeInputs({ supplierPaymentDays: 60 }), 'baze').warningsSq.some((w) => w.includes('furnitorët pas'))).toBe(false);
+  });
+
+  it('warns when the conservative scenario collects faster than the base days (stale fixed override)', () => {
+    const inputs = makeInputs({ collectionDays: 60 }, { collectionDaysOverride: 25 });
+    expect(projectScenario(inputs, 'konservator').warningsSq.some((w) => w.startsWith('Në skenarin konservator klientët paguajnë pas 25 ditësh'))).toBe(true);
+    expect(projectScenario(inputs, 'baze').warningsSq.some((w) => w.startsWith('Në skenarin konservator'))).toBe(false);
+    const slower = makeInputs({ collectionDays: 10 }, { collectionDaysOverride: 25 });
+    expect(projectScenario(slower, 'konservator').warningsSq.some((w) => w.startsWith('Në skenarin konservator'))).toBe(false);
+  });
+
+  it('discloses that tax ignores the startup investment (no depreciation)', () => {
+    // Startup 1000, operating +30/month, tax 20% → 72 tax on 360 while payback is far away.
+    const r = projectScenario(makeInputs({ startupCosts: [line('s', 'pajisje', 1000)], profitTaxPct: 20, ownCapital: 2000 }), 'baze');
+    expect(r.totals.tax).toBeCloseTo(72, 9);
+    expect(r.warningsSq.some((w) => w.startsWith('Tatimi') && w.includes('pa zbritur investimin fillestar') && w.includes('Kërkon verifikim lokal'))).toBe(true);
+    expect(FORMULAS_SQ.some((f) => f.includes('investimi fillestar nuk amortizohet'))).toBe(true);
+    expect(projectScenario(makeInputs(), 'baze').warningsSq.some((w) => w.startsWith('Tatimi'))).toBe(false);
+  });
+});
+
+describe('review regressions — input cleaning', () => {
+  it('replaces a missing or invalid scenario multiplier with 1, never 0', () => {
+    const r = projectScenario(makeInputs({}, { fixedCostMultiplier: Number.NaN, variableCostMultiplier: undefined as unknown as number }), 'baze');
+    expect(r.params.fixedCostMultiplier).toBe(1);
+    expect(r.params.variableCostMultiplier).toBe(1);
+    expect(r.rows[0]).toMatchObject({ variableCosts: 40, fixedCosts: 30, operatingResult: 30 });
+    expect(r.capital.totalRequired).toBe(130);
+    expect(r.warningsSq.filter((w) => w.endsWith('u zëvendësua me 1 (pa ndryshim).'))).toHaveLength(2);
+  });
+
+  it('treats a scenario with only customer fields as unchanged prices and costs', () => {
+    const inputs = makeInputs();
+    inputs.scenarios.baze = { startCustomers: 10, monthlyNewCustomers: 0, monthlyChurnPct: 0 } as unknown as typeof inputs.scenarios.baze;
+    const r = projectScenario(inputs, 'baze');
+    expect(r.rows[0].revenue).toBe(100);
+    expect(r.unitEconomics.status).toBe('ok');
+  });
+
+  it('rounds fractional horizons first, then validates, and always says so', () => {
+    const horizon = (h: number) => projectScenario(makeInputs({ horizonMonths: h }), 'baze');
+    expect(horizon(1.5).rows).toHaveLength(2);
+    expect(horizon(1.5).warningsSq).toContain('Horizonti (1,5 muaj) u rrumbullakua në 2 muaj të plotë.');
+    expect(horizon(13.4).rows).toHaveLength(13);
+    expect(horizon(0.6).rows).toHaveLength(1);
+    expect(horizon(1.4).rows).toHaveLength(1);
+    expect(horizon(0.6).warningsSq).toContain('Horizonti (0,6 muaj) u rrumbullakua në 1 muaj të plotë.');
+    expect(horizon(0.4).rows).toHaveLength(12);
+    expect(horizon(0.4).warningsSq.some((w) => w.includes('nuk është i vlefshëm'))).toBe(true);
+    expect(horizon(12).warningsSq.some((w) => w.startsWith('Horizonti'))).toBe(false);
+  });
+
+  it('reports numeric overflow instead of presenting the opening cash as the low point', () => {
+    const r = projectScenario(makeInputs({ pricePerUnit: 1e300, variableCostPerUnit: 1e299 }, { startCustomers: 1e10 }), 'baze');
+    expect(r.totals.revenue).toBe(Number.POSITIVE_INFINITY);
+    expect(r.minCashBalance).toBeNaN();
+    expect(r.minCashMonth).toBeNull();
+    expect(r.monthsWithNegativeCash).toBeNaN();
+    expect(r.warningsSq[0]).toContain('vlera jo numerike ose të pafundme');
+    expect(r.payback).toEqual({ recoveredInMonth: null, statementSq: 'Rikuperimi nuk mund të llogaritet: projeksioni dha vlera jo numerike ose shumë të mëdha.' });
+    expect(r.capital.explanationSq.join(' ')).not.toContain('e mbulon');
+    expect(r.capital.explanationSq.join(' ')).toContain('nuk janë të besueshme');
   });
 });

@@ -116,6 +116,13 @@ describe('parseWbIndicatorPage', () => {
     expect(err.messageSq).toContain('Invalid value');
   });
 
+  it('keeps remote error text short and on one line', () => {
+    const long = [{ message: [{ id: '120', key: 'Invalid\nvalue', value: 'x'.repeat(5000) }] }];
+    const err = catchSourceError(() => parseWbIndicatorPage(long, GDP, { retrievedAt: RETRIEVED, url: URL, knownCodes: KNOWN }));
+    expect(err.messageSq).not.toContain('\n');
+    expect(err.messageSq.length).toBeLessThan(400);
+  });
+
   it('treats the documented no-data payload as an empty, successful page', () => {
     const res = parseWbIndicatorPage(WB_NO_DATA, GDP, { retrievedAt: RETRIEVED, url: URL, knownCodes: KNOWN });
     expect(res.observations).toEqual([]);

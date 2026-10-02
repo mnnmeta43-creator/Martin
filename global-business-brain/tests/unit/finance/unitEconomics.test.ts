@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeUnitEconomics } from '@/lib/finance/engine';
+import { plain } from './helpers';
 
 describe('computeUnitEconomics', () => {
   it('computes contribution, margin and break-even for a simple case', () => {
@@ -42,13 +43,36 @@ describe('computeUnitEconomics', () => {
     expect(ue.explanationSq).toContain('çmimi, kostoja ose modeli');
   });
 
-  it('flags zero contribution: each unit covers nothing', () => {
+  it('flags zero contribution: each unit covers nothing, and more volume changes nothing', () => {
     const ue = computeUnitEconomics({ pricePerUnit: 5, variableCostPerUnit: 5, fixedCostsMonthly: 30, unitsPerCustomerPerMonth: 1 });
     expect(ue.status).toBe('kontribut_zero_ose_negativ');
     expect(ue.contributionPerUnit).toBe(0);
     expect(ue.breakEvenUnitsPerMonth).toBeNull();
     expect(ue.explanationSq).toContain('nuk mbulon asgjë');
-    expect(ue.explanationSq).toContain('e përkeqësojnë');
+    expect(ue.explanationSq).toContain('kostot fikse nuk mbulohen kurrë');
+    expect(ue.explanationSq).toContain('Më shumë shitje nuk e ndryshojnë rezultatin — vëllimi nuk e rregullon modelin');
+    // With contribution exactly 0 the result does not get worse with volume.
+    expect(ue.explanationSq).not.toContain('e përkeqësojnë');
+  });
+
+  it('does not mention fixed costs that are never covered when there are none', () => {
+    const ue = computeUnitEconomics({ pricePerUnit: 4, variableCostPerUnit: 4, fixedCostsMonthly: 0, unitsPerCustomerPerMonth: 1 });
+    expect(ue.explanationSq).not.toContain('kostot fikse');
+    expect(ue.explanationSq).toContain('vëllimi nuk e rregullon modelin');
+  });
+
+  it('keeps sub-cent prices readable instead of rounding them to 0,01 and 0', () => {
+    // 0.006 − 0.003 = 0.003; 30 ÷ 0.003 = 10 000 units
+    const ok = computeUnitEconomics({ pricePerUnit: 0.006, variableCostPerUnit: 0.003, fixedCostsMonthly: 30, unitsPerCustomerPerMonth: 1 });
+    expect(plain(ok.explanationSq)).toContain('= 0,006 − 0,003 = 0,003');
+    expect(plain(ok.explanationSq)).toContain('= 30 ÷ 0,003 ≈ 10 000 njësi');
+    const loss = computeUnitEconomics({ pricePerUnit: 0.004, variableCostPerUnit: 0.005, fixedCostsMonthly: 30, unitsPerCustomerPerMonth: 1 });
+    expect(loss.explanationSq).toContain('çmimi (0,004)');
+    expect(loss.explanationSq).toContain('(0,005)');
+    expect(loss.explanationSq).toContain('humbni 0,001 për çdo njësi');
+    // Ordinary prices keep two decimals.
+    const normal = computeUnitEconomics({ pricePerUnit: 10.5, variableCostPerUnit: 4.25, fixedCostsMonthly: 30, unitsPerCustomerPerMonth: 1 });
+    expect(normal.explanationSq).toContain('= 10,5 − 4,25 = 6,25');
   });
 
   it('returns a null margin when the price is 0', () => {

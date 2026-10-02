@@ -83,8 +83,9 @@ describe('configStatus', () => {
     const serialized = JSON.stringify(status);
     for (const value of Object.values(secrets)) expect(serialized).not.toContain(value);
     for (const item of status) {
-      expect(Object.keys(item).sort()).toEqual(['enablesSq', 'impactIfMissingSq', 'key', 'present']);
+      expect(Object.keys(item).sort()).toEqual(['enablesSq', 'featureOffWhenMissing', 'impactIfMissingSq', 'key', 'present']);
       expect(typeof item.present).toBe('boolean');
+      expect(typeof item.featureOffWhenMissing).toBe('boolean');
     }
     expect(status.find((s) => s.key === 'ANTHROPIC_API_KEY')?.present).toBe(true);
   });
@@ -97,5 +98,24 @@ describe('configStatus', () => {
     expect(byKey.CRON_SECRET.impactIfMissingSq).toContain('Rifreskimi automatik është i çaktivizuar');
     expect(byKey.DATABASE_URL.impactIfMissingSq).toContain('NUK funksionojnë');
     expect(configStatus({ NODE_ENV: 'development' }).find((s) => s.key === 'DATABASE_URL')?.impactIfMissingSq).toContain('PGlite');
+  });
+
+  it('flags only keys whose absence switches a feature off', () => {
+    const off = (source: Record<string, string>) =>
+      configStatus(source)
+        .filter((s) => s.featureOffWhenMissing)
+        .map((s) => s.key);
+    expect(off({ NODE_ENV: 'production' })).toEqual(['DATABASE_URL', 'ANTHROPIC_API_KEY', 'CRON_SECRET']);
+    expect(off({ NODE_ENV: 'development' })).toEqual(['ANTHROPIC_API_KEY', 'CRON_SECRET']);
+    expect(off({ NODE_ENV: 'production', ALLOW_EMBEDDED_DB: 'true' })).toEqual(['ANTHROPIC_API_KEY', 'CRON_SECRET']);
+  });
+
+  it('writes every explanation as a full Albanian sentence', () => {
+    for (const item of configStatus({ NODE_ENV: 'production' })) {
+      for (const text of [item.enablesSq, item.impactIfMissingSq]) {
+        expect(text).toMatch(/^[A-ZÇË"]/);
+        expect(text).toMatch(/[.)]$/);
+      }
+    }
   });
 });

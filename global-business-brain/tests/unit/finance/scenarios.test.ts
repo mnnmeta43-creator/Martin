@@ -138,3 +138,15 @@ describe('sensitivityAnalysis', () => {
     }
   });
 });
+
+describe('sensitivityAnalysis — labels match the change actually applied', () => {
+  it('caps price and new-customer drops at −100% (a price cannot fall below 0)', () => {
+    const byDriver = (delta: number) => Object.fromEntries(sensitivityAnalysis(makeInputs(), 'baze', delta).map((i) => [i.driver, i]));
+    const big = byDriver(150);
+    expect(big.cmimi.changeSq).toBe('−100%');
+    expect(big.klientet_e_rinj.changeSq).toBe('−100%');
+    expect(big.kosto_fikse.changeSq).toBe('+150%');
+    expect(big.cmimi.shockedTotalNet).toBe(byDriver(100).cmimi.shockedTotalNet);
+    expect(byDriver(1000).largimi.changeSq).toBe('+100 pikë përqindjeje');
+  });
+});

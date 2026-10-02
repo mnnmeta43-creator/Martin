@@ -20,6 +20,7 @@ const csp = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ['@electric-sql/pglite', 'pdfkit', 'exceljs', 'pg'],
+  turbopack: { root: __dirname },
   async headers() {
     return [
       {

@@ -257,6 +257,15 @@ function measured(ctx: CountryDataContext, code: string): Measured | null {
   };
 }
 
+/**
+ * Basis for a hedged interpretation. A very old value is still stated as a dated fact, but a
+ * hypothesis about today's conditions is not built on it.
+ */
+function interpretable(ctx: CountryDataContext, code: string): Measured | null {
+  const m = measured(ctx, code);
+  return m && m.series.status !== 'shume_i_vjeter' ? m : null;
+}
+
 function hypothesis(ctx: CountryDataContext, key: string, textSq: string, basis: Measured[]): Claim {
   return {
     id: `macro-${ctx.country.code}-hipoteze-${key}`,
@@ -275,18 +284,18 @@ const HIGH_YOUTH_UNEMPLOYMENT_PCT = 25;
 
 function interpretationClaims(ctx: CountryDataContext): Claim[] {
   const out: Claim[] = [];
-  const growth = measured(ctx, 'gdp_growth');
+  const growth = interpretable(ctx, 'gdp_growth');
   if (growth && growth.obs.value < 0) {
     out.push(
       hypothesis(
         ctx,
         'tkurrje',
-        `PBB-ja reale u tkurr me ${formatIndicatorValue(Math.abs(growth.obs.value), growth.series.definition)} në ${growth.period}. Në periudha të tilla klientët shpesh shtyjnë blerjet jo-thelbësore dhe pagesat mund të vonohen; verifikoni kërkesën në segmentin tuaj.`,
+        `PBB-ja reale u tkurr me ${formatIndicatorValue(Math.abs(growth.obs.value), growth.series.definition)} në ${growth.period}. Në periudha të tilla klientët shpesh shtyjnë blerjet jothelbësore dhe pagesat mund të vonohen; verifikoni kërkesën në segmentin tuaj.`,
         [growth],
       ),
     );
   }
-  const inflation = measured(ctx, 'inflation_cpi');
+  const inflation = interpretable(ctx, 'inflation_cpi');
   if (inflation && inflation.obs.value >= HIGH_INFLATION_PCT) {
     out.push(
       hypothesis(
@@ -297,7 +306,7 @@ function interpretationClaims(ctx: CountryDataContext): Claim[] {
       ),
     );
   }
-  const lending = measured(ctx, 'lending_rate');
+  const lending = interpretable(ctx, 'lending_rate');
   if (lending && lending.obs.value >= HIGH_LENDING_RATE_PCT) {
     out.push(
       hypothesis(
@@ -308,7 +317,7 @@ function interpretationClaims(ctx: CountryDataContext): Claim[] {
       ),
     );
   }
-  const remittances = measured(ctx, 'remittances_gdp');
+  const remittances = interpretable(ctx, 'remittances_gdp');
   if (remittances && remittances.obs.value >= HIGH_REMITTANCES_PCT_GDP) {
     out.push(
       hypothesis(
@@ -319,7 +328,7 @@ function interpretationClaims(ctx: CountryDataContext): Claim[] {
       ),
     );
   }
-  const youth = measured(ctx, 'youth_unemployment');
+  const youth = interpretable(ctx, 'youth_unemployment');
   if (youth && youth.obs.value >= HIGH_YOUTH_UNEMPLOYMENT_PCT) {
     out.push(
       hypothesis(

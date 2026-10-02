@@ -9,6 +9,7 @@ import {
   formatPercent,
   formatPeriod,
 } from '@/lib/finance/format';
+import { formatIsoDateSq, parseIsoDateParts } from '@/lib/finance/locale';
 import { plain } from './helpers';
 
 // Intl (sq-AL) separates groups and units with non-breaking spaces; `plain` makes assertions readable.
@@ -133,5 +134,33 @@ describe('formatDate / formatDateTime', () => {
     expect(formatDateTime('2026-10-02T09:04:00Z')).toBe('2 tetor 2026, 09:04 UTC');
     expect(formatDateTime('2026-10-02T21:04:00Z')).toBe('2 tetor 2026, 21:04 UTC');
     expect(formatDateTime('garbage')).toBe('—');
+  });
+});
+
+describe('impossible dates and timestamps', () => {
+  it('shows impossible calendar dates as missing instead of rolling them into the next month', () => {
+    expect(formatDate('2026-02-31')).toBe('—');
+    expect(formatDate('2026-04-31')).toBe('—');
+    expect(formatDate('2026-02-29')).toBe('—');
+    expect(formatDate('2026-02-30T10:00:00Z')).toBe('—');
+    expect(formatIsoDateSq('2026-02-31')).toBe('—');
+    expect(parseIsoDateParts('2026-02-31')).toBeNull();
+    // The raw text is kept for an unparseable period; it is never turned into another date.
+    expect(formatPeriod('2026-02-31')).toBe('2026-02-31');
+  });
+
+  it('accepts leap days and month ends that exist', () => {
+    expect(formatDate('2024-02-29')).toBe('29 shkurt 2024');
+    expect(formatDate('2000-02-29')).toBe('29 shkurt 2000');
+    expect(formatDate('1900-02-29')).toBe('—');
+    expect(formatDate('2026-04-30')).toBe('30 prill 2026');
+    expect(formatDate('2026-12-31')).toBe('31 dhjetor 2026');
+  });
+
+  it('keeps calendar parsing date-only, so timestamps go through the time-zone aware path', () => {
+    expect(parseIsoDateParts('2026-10-01T16:00:00Z')).toBeNull();
+    expect(formatIsoDateSq('2026-10-01T16:00:00Z')).toBe('—');
+    expect(formatDate('2026-10-01T16:00:00Z')).toBe('1 tetor 2026');
+    expect(formatDate('2026-10-02T23:30:00Z', { timeZone: 'Europe/Tirane' })).toBe('3 tetor 2026');
   });
 });

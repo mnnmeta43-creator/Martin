@@ -23,6 +23,7 @@ import type {
 } from '@/lib/domain/types';
 import { SCENARIO_LABELS, STARTUP_CATEGORY_LABELS } from '@/lib/domain/taxonomy';
 import { formatMoney, formatNumber, formatPercent } from '@/lib/finance/format';
+import { numberFormat } from '@/lib/finance/locale';
 
 export const SCENARIO_IDS: readonly ScenarioId[] = ['konservator', 'baze', 'optimist'];
 export const STARTUP_CATEGORIES: readonly StartupCategory[] = ['hapje', 'pajisje', 'depozita', 'inventar', 'tarifa', 'testim_tregu'];
@@ -32,6 +33,12 @@ export const DAYS_PER_MONTH = 30;
 export const MAX_HORIZON_MONTHS = 120;
 const DEFAULT_HORIZON_MONTHS = 12;
 const LONG_COLLECTION_DAYS = 60;
+const LONG_SUPPLIER_DAYS = 60;
+/**
+ * Months the same assumptions are run past the horizon, internally, only to detect a cash deficit
+ * that keeps deepening after the horizon (the capital requirement is then a minimum, not enough).
+ */
+export const LOOKAHEAD_MONTHS = 24;
 // Relative tolerance so float noise (e.g. 1e-14) is not reported as debt or negative cash.
 const RELATIVE_TOLERANCE = 1e-9;
 
@@ -50,7 +57,7 @@ export const FORMULAS_SQ: readonly string[] = [
   'Pika e barazimit në klientë = pika e barazimit në njësi ÷ njësi për klient në muaj',
   'Kostot fikse = shuma e kostove fikse mujore të aktivizuara × shumëzuesi i kostove fikse. Paga e pronarit shtohet veçmas dhe nuk shumëzohet.',
   'Rezultati operativ = të ardhurat − kostot variabël − kostot fikse − paga e pronarit',
-  'Tatimi i muajit = max(0, max(0, rezultati operativ kumulativ) × norma e tatimit − tatimi i llogaritur deri tani). Humbjet e muajve të parë zbriten përmes rezultatit kumulativ. Thjeshtim: tatimi paguhet në të njëjtin muaj.',
+  'Tatimi i muajit = max(0, max(0, rezultati operativ kumulativ) × norma e tatimit − tatimi i llogaritur deri tani). Humbjet e muajve të parë zbriten përmes rezultatit kumulativ. Thjeshtim: tatimi paguhet në të njëjtin muaj; investimi fillestar nuk amortizohet dhe nuk zbritet nga fitimi, prandaj tatimi mund të jetë i mbivlerësuar. Rregullat reale të tatimit: Kërkon verifikim lokal.',
   'Rezultati neto = rezultati operativ − tatimi',
   'Vonesa e arkëtimit në muaj L = ditët e arkëtimit ÷ 30. Të ardhurat e muajit k arkëtohen: pjesa (1 − f) në muajin k + ⌊L⌋ dhe pjesa f në muajin k + ⌊L⌋ + 1, ku f = L − ⌊L⌋.',
   'Pagesat te furnitorët për kostot variabël ndjekin të njëjtin rregull me ditët e pagesës së furnitorëve.',
@@ -62,10 +69,11 @@ export const FORMULAS_SQ: readonly string[] = [
   'Paraja në fund të muajit = paraja në fund të muajit të kaluar + fluksi neto i parasë (muaji 0 = paraja fillestare).',
   'Të arkëtueshmet në fund = të ardhurat kumulative − arkëtimet kumulative; të pagueshmet në fund = kostot variabël kumulative − pagesat kumulative te furnitorët.',
   'Deficiti maksimal i parasë nga operimi = max(0, −(minimumi i fluksit neto kumulativ të parasë)). Nuk përfshin investimin fillestar, që të mos numërohet dy herë.',
-  'Rezerva = muajt e rezervës × (kostot fikse mujore + paga e pronarit)',
+  'Rezerva = muajt e rezervës × (kostot fikse mujore + paga e pronarit kur përfshihet)',
   'Kapitali i nevojshëm = investimi fillestar + deficiti maksimal i parasë nga operimi + rezerva',
+  `Kapitali i nevojshëm është minimum, jo shuma e mjaftueshme, kur paraja kumulative është ende në rënie në muajin e fundit, kur bie më poshtë nëse të njëjtat supozime vazhdojnë edhe ${LOOKAHEAD_MONTHS} muaj pas horizontit, ose kur kontributi për njësi është zero ose negativ.`,
   'Mungesa e kapitalit = max(0, kapitali i nevojshëm − kapitali vetjak). Nuk supozohet asnjë kredi, grant apo financim tjetër.',
-  'Rikuperimi i investimit = muaji i parë kur fluksi neto kumulativ i parasë nga operimi ≥ investimi fillestar. Është vlerësim, jo datë e garantuar.',
+  'Rikuperimi i investimit = muaji i parë nga i cili fluksi neto kumulativ i parasë nga operimi mbetet ≥ investimi fillestar deri në fund të horizontit; nëse arrihet dhe pastaj humbet, nuk numërohet si rikuperim. Pa investim fillestar matet kthimi i deficitit të operimit (fluksi kumulativ nuk është më negativ). Është vlerësim, jo datë e garantuar.',
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,27 +91,45 @@ function nonNegative(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-function noContributionSq(price: number, variable: number, contribution: number): string {
+type AmountFormatter = (value: number) => string;
+
+/**
+ * Formatter shared by every amount in one explanation. Two decimals hide prices below a cent
+ * ("0,01 − 0 = 0"), so the decimals grow until the smallest non-zero amount keeps two significant
+ * digits; using one precision for the whole sentence keeps its arithmetic readable.
+ */
+function amountFormatter(values: readonly number[]): AmountFormatter {
+  let decimals = 2;
+  for (const value of values) {
+    const magnitude = Math.abs(value);
+    if (magnitude > 0 && magnitude < 0.1) decimals = Math.max(decimals, Math.min(10, 1 - Math.floor(Math.log10(magnitude))));
+  }
+  const formatter = numberFormat({ maximumFractionDigits: decimals });
+  return (value) => formatter.format(value);
+}
+
+function noContributionSq(price: number, variable: number, contribution: number, fixed: number, amount: AmountFormatter): string {
   const tail = ' Duhet ndryshuar çmimi, kostoja ose modeli i biznesit.';
   if (contribution < 0) {
     return (
-      `Çdo njësi e shitur humbet para: çmimi (${formatNumber(price)}) është më i ulët se kostoja variabël për njësi (${formatNumber(variable)}), ` +
-      `pra humbni ${formatNumber(-contribution)} për çdo njësi. Sa më shumë të shisni, aq më e madhe bëhet humbja — më shumë shitje e përkeqësojnë situatën.${tail}`
+      `Çdo njësi e shitur humbet para: çmimi (${amount(price)}) është më i ulët se kostoja variabël për njësi (${amount(variable)}), ` +
+      `pra humbni ${amount(-contribution)} për çdo njësi. Sa më shumë të shisni, aq më e madhe bëhet humbja — më shumë shitje e përkeqësojnë situatën.${tail}`
     );
   }
+  const fixedSq = fixed > 0 ? ', prandaj kostot fikse nuk mbulohen kurrë' : '';
   return (
-    `Çdo njësi e shitur nuk mbulon asgjë: çmimi (${formatNumber(price)}) është i barabartë me koston variabël për njësi, pra kontributi është 0 ` +
-    `dhe kostot fikse nuk mbulohen kurrë. Më shumë shitje nuk e përmirësojnë rezultatin — e përkeqësojnë, sepse rrisin punën dhe rrezikun pa sjellë asgjë.${tail}`
+    `Çdo njësi e shitur nuk mbulon asgjë: çmimi (${amount(price)}) është i barabartë me koston variabël për njësi, pra kontributi është 0${fixedSq}. ` +
+    `Më shumë shitje nuk e ndryshojnë rezultatin — vëllimi nuk e rregullon modelin.${tail}`
   );
 }
 
-function breakEvenSq(fixed: number, contribution: number, units: number, customers: number | null): string {
+function breakEvenSq(fixed: number, contribution: number, units: number, customers: number | null, amount: AmountFormatter): string {
   if (fixed === 0) return ' Nuk ka kosto fikse, prandaj pika e barazimit është 0 njësi: çdo njësi e shitur sjell kontribut pozitiv.';
   const customersSq =
     customers === null
       ? '; numri i klientëve nuk llogaritet sepse sasia për klient në muaj është 0.'
       : `, rreth ${formatNumber(customers)} klientë në muaj.`;
-  return ` Pika e barazimit në njësi = kostot fikse ÷ kontributi për njësi = ${formatNumber(fixed)} ÷ ${formatNumber(contribution)} ≈ ${formatNumber(units)} njësi në muaj${customersSq}`;
+  return ` Pika e barazimit në njësi = kostot fikse ÷ kontributi për njësi = ${amount(fixed)} ÷ ${amount(contribution)} ≈ ${formatNumber(units)} njësi në muaj${customersSq}`;
 }
 
 /** Contribution, margin and monthly break-even for one price/cost combination. */
@@ -115,6 +141,7 @@ export function computeUnitEconomics(i: UnitEconomicsInput): UnitEconomics {
   const contribution = price - variable;
   const marginPct = price > 0 ? (contribution / price) * 100 : null;
   const common = { pricePerUnit: price, variableCostPerUnit: variable, contributionPerUnit: contribution, contributionMarginPct: marginPct, fixedCostsMonthly: fixed };
+  const amount = amountFormatter([price, variable, contribution, fixed]);
 
   if (contribution <= 0) {
     return {
@@ -122,16 +149,16 @@ export function computeUnitEconomics(i: UnitEconomicsInput): UnitEconomics {
       breakEvenUnitsPerMonth: null,
       breakEvenCustomersPerMonth: null,
       status: 'kontribut_zero_ose_negativ',
-      explanationSq: noContributionSq(price, variable, contribution),
+      explanationSq: noContributionSq(price, variable, contribution, fixed, amount),
     };
   }
 
   const breakEvenUnits = fixed / contribution;
   const breakEvenCustomers = unitsPerCustomer > 0 ? breakEvenUnits / unitsPerCustomer : null;
   const explanationSq =
-    `Kontributi për njësi = çmimi − kostoja variabël për njësi = ${formatNumber(price)} − ${formatNumber(variable)} = ${formatNumber(contribution)} ` +
+    `Kontributi për njësi = çmimi − kostoja variabël për njësi = ${amount(price)} − ${amount(variable)} = ${amount(contribution)} ` +
     `(marzhi i kontributit ${formatPercent(marginPct)}).` +
-    breakEvenSq(fixed, contribution, breakEvenUnits, breakEvenCustomers);
+    breakEvenSq(fixed, contribution, breakEvenUnits, breakEvenCustomers, amount);
   return { ...common, breakEvenUnitsPerMonth: breakEvenUnits, breakEvenCustomersPerMonth: breakEvenCustomers, status: 'ok', explanationSq };
 }
 
@@ -170,20 +197,31 @@ function cleanAmount(value: number, labelSq: string, warnings: string[], max = I
   return value;
 }
 
+/** A missing or invalid multiplier means "no change" (1); 0 would silently remove prices or costs. */
+function cleanMultiplier(value: number, labelSq: string, warnings: string[]): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    warnings.push(`Vlera e pavlefshme për «${labelSq}» (${describeValue(value)}) u zëvendësua me 1 (pa ndryshim).`);
+    return 1;
+  }
+  return value;
+}
+
 function cleanLines(lines: MoneyLine[] | undefined, warnings: string[]): MoneyLine[] {
   return (lines ?? []).map((line) => ({ ...line, amount: cleanAmount(line.amount, line.labelSq, warnings) }));
 }
 
+/** Rounds to whole months first, then validates, so 0.6 and 1.4 are both treated as 1 month. */
 function cleanHorizon(value: number, warnings: string[]): number {
-  if (!Number.isFinite(value) || value < 1) {
+  const rounded = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : Number.NaN;
+  if (!(rounded >= 1)) {
     warnings.push(`Horizonti (${describeValue(value)}) nuk është i vlefshëm; u përdorën ${DEFAULT_HORIZON_MONTHS} muaj.`);
     return DEFAULT_HORIZON_MONTHS;
   }
-  const rounded = Math.round(value);
   if (rounded > MAX_HORIZON_MONTHS) {
     warnings.push(`Horizonti u kufizua në ${MAX_HORIZON_MONTHS} muaj.`);
     return MAX_HORIZON_MONTHS;
   }
+  if (rounded !== value) warnings.push(`Horizonti (${formatNumber(value)} muaj) u rrumbullakua në ${rounded} muaj të plotë.`);
   return rounded;
 }
 
@@ -204,9 +242,9 @@ function cleanScenario(id: ScenarioId, raw: ScenarioParams | undefined, warnings
     startCustomers: cleanAmount(raw.startCustomers, field('klientët fillestarë'), warnings),
     monthlyNewCustomers: cleanAmount(raw.monthlyNewCustomers, field('klientë të rinj në muaj'), warnings),
     monthlyChurnPct: cleanAmount(raw.monthlyChurnPct, field('largimi mujor i klientëve (%)'), warnings, 100),
-    priceMultiplier: cleanAmount(raw.priceMultiplier, field('shumëzuesi i çmimit'), warnings),
-    variableCostMultiplier: cleanAmount(raw.variableCostMultiplier, field('shumëzuesi i kostos variabël'), warnings),
-    fixedCostMultiplier: cleanAmount(raw.fixedCostMultiplier, field('shumëzuesi i kostove fikse'), warnings),
+    priceMultiplier: cleanMultiplier(raw.priceMultiplier, field('shumëzuesi i çmimit'), warnings),
+    variableCostMultiplier: cleanMultiplier(raw.variableCostMultiplier, field('shumëzuesi i kostos variabël'), warnings),
+    fixedCostMultiplier: cleanMultiplier(raw.fixedCostMultiplier, field('shumëzuesi i kostove fikse'), warnings),
     collectionDaysOverride:
       raw.collectionDaysOverride === null || raw.collectionDaysOverride === undefined
         ? null
@@ -322,10 +360,10 @@ function customersPath(params: ScenarioParams, horizon: number): number[] {
 
 type AccrualRow = Omit<MonthRow, 'cashIn' | 'cashOut' | 'netCashFlow' | 'cashBalance' | 'receivablesEnd' | 'payablesEnd'>;
 
-function accrualRows(inputs: FinancialInputs, params: ScenarioParams, seasonality: number[], terms: MonthlyTerms): AccrualRow[] {
+function accrualRows(inputs: FinancialInputs, params: ScenarioParams, seasonality: number[], terms: MonthlyTerms, horizon: number): AccrualRow[] {
   let cumulativeOperating = 0;
   let taxAccrued = 0;
-  return customersPath(params, inputs.horizonMonths).map((customers, index) => {
+  return customersPath(params, horizon).map((customers, index) => {
     const month = index + 1;
     const calendarMonth = calendarMonthOf(inputs.startMonth, month);
     const units = customers * inputs.unitsPerCustomerPerMonth * seasonality[calendarMonth - 1];
@@ -428,16 +466,133 @@ function cumulative(values: readonly number[]): number[] {
   return values.map((v) => (running += v));
 }
 
+/** Overflow (e.g. huge prices × customers) yields Infinity/NaN; such a projection must not look fine. */
+function allFinite(rows: readonly MonthRow[], openingCash: number): boolean {
+  return Number.isFinite(openingCash) && rows.every((row) => Object.values(row).every((v) => typeof v !== 'number' || Number.isFinite(v)));
+}
+
+/** Lowest cumulative value at or below 0 and its index (−1 when the cumulative never goes negative). */
+function lowestPoint(cumulativeCash: readonly number[]): { value: number; index: number } {
+  let value = 0;
+  let index = -1;
+  cumulativeCash.forEach((c, i) => {
+    if (c < value) {
+      value = c;
+      index = i;
+    }
+  });
+  return { value, index };
+}
+
+/** Whether the in-horizon deficit is the whole deficit, or only a lower bound of it. */
+interface DeficitOutlook {
+  inHorizonDeficit: boolean;
+  noContribution: boolean; // contribution ≤ 0: the deficit grows every month, no volume fixes it
+  fallingAtEnd: boolean; // the lowest cumulative cash is the last month and it is still falling
+  deeperAfterHorizon: boolean; // the same assumptions, run on, push cumulative cash lower
+  extendedDeficit: number; // deficit over horizon + LOOKAHEAD_MONTHS
+  extendedMonth: number | null;
+  extendedStillFalling: boolean; // still falling at the end of the look-ahead too
+}
+
+function deficitOutlook(rows: MonthRow[], extended: MonthRow[] | null, unitEconomics: UnitEconomics, tolerance: number): DeficitOutlook {
+  const cumulativeCash = cumulative(rows.map((r) => r.netCashFlow));
+  const low = lowestPoint(cumulativeCash);
+  const last = rows.length - 1;
+  const extendedCash = extended ? cumulative(extended.map((r) => r.netCashFlow)) : cumulativeCash;
+  const extendedLow = lowestPoint(extendedCash);
+  const extendedRows = extended ?? rows;
+  const extendedLast = extendedRows.length - 1;
+  const extendedDeficit = snap(-extendedLow.value, tolerance);
+  return {
+    inHorizonDeficit: low.value < -tolerance,
+    noContribution: unitEconomics.status !== 'ok' && extendedDeficit > 0,
+    fallingAtEnd: rows[last].netCashFlow < -tolerance && cumulativeCash[last] <= low.value + tolerance,
+    deeperAfterHorizon: extendedLow.value < low.value - tolerance,
+    extendedDeficit,
+    extendedMonth: extendedLow.index >= 0 ? extendedRows[extendedLow.index].month : null,
+    extendedStillFalling: extendedLow.index === extendedLast && extendedRows[extendedLast].netCashFlow < -tolerance,
+  };
+}
+
+function isLowerBound(outlook: DeficitOutlook | null): boolean {
+  return outlook !== null && (outlook.noContribution || outlook.fallingAtEnd || outlook.deeperAfterHorizon);
+}
+
+type Money = (value: number) => string;
+
+/** Why the in-horizon deficit is not the whole deficit (used in the capital text and the warning). */
+function notFullDeficitSq(outlook: DeficitOutlook, horizon: number, money: Money): string {
+  const reason = outlook.fallingAtEnd
+    ? `në muajin e fundit (${horizon}) paraja kumulative është ende në rënie`
+    : `nëse të njëjtat supozime vazhdojnë pas horizontit, paraja kumulative ${outlook.inHorizonDeficit ? 'bie përsëri më poshtë' : 'bie nën zero'}`;
+  if (!outlook.deeperAfterHorizon || outlook.extendedMonth === null) return reason;
+  const reach = outlook.extendedStillFalling
+    ? `të paktën ${money(outlook.extendedDeficit)} deri në muajin ${outlook.extendedMonth}`
+    : `${money(outlook.extendedDeficit)} në muajin ${outlook.extendedMonth}`;
+  return `${reason}; me të njëjtat supozime deficiti arrin ${reach}`;
+}
+
+function deficitSq(maxDeficit: number, outlook: DeficitOutlook, horizon: number, money: Money): string {
+  const inHorizon = `Deficiti i parasë nga operimi brenda ${horizon} muajve: ${money(maxDeficit)} (pa investimin fillestar).`;
+  if (outlook.noContribution) {
+    return `${inHorizon} Me kontribut për njësi zero ose negativ ky deficit rritet çdo muaj dhe arkëtimet nuk e mbulojnë kurrë.`;
+  }
+  if (isLowerBound(outlook)) {
+    return `${inHorizon} Ky nuk është deficiti i plotë: ${notFullDeficitSq(outlook, horizon, money)}. Prandaj kapitali i nevojshëm më poshtë është minimum, jo shuma e mjaftueshme — provoni një horizont më të gjatë.`;
+  }
+  return maxDeficit > 0
+    ? `Deficiti maksimal i parasë nga operimi: ${money(maxDeficit)} — shuma më e madhe kumulative që operimi konsumon para se arkëtimet ta mbulojnë (pa investimin fillestar).`
+    : 'Me këto supozime operimi nuk krijon deficit kumulativ parash brenda horizontit (deficiti maksimal = 0).';
+}
+
+function coverageSq(outlook: DeficitOutlook, gap: number, ownCapital: number, horizon: number, money: Money): string {
+  if (outlook.noContribution) {
+    return `Kapitali juaj: ${money(ownCapital)}. Asnjë shumë kapitali nuk e rregullon këtë model: me kontribut zero ose negativ çdo muaj humbet para, dhe më shumë kapital vetëm e shtyn humbjen. Ndryshoni çmimin, koston ose modelin.`;
+  }
+  if (isLowerBound(outlook)) {
+    return gap > 0
+      ? `Kapitali juaj: ${money(ownCapital)}. Mungojnë ${money(gap)} edhe për minimumin e llogaritur për ${horizon} muaj — nevoja reale është më e madhe.`
+      : `Kapitali juaj (${money(ownCapital)}) mbulon minimumin e llogaritur për ${horizon} muaj, por jo domosdoshmërisht nevojën e plotë, sepse deficiti vazhdon pas horizontit.`;
+  }
+  return gap > 0
+    ? `Kapitali juaj: ${money(ownCapital)}. Mungojnë ${money(gap)} për të mbuluar kapitalin e nevojshëm.`
+    : `Kapitali juaj (${money(ownCapital)}) e mbulon kapitalin e nevojshëm me këto supozime.`;
+}
+
+/** Receivables and payables left at the horizon: profit not yet cash, and cash still to go out. */
+function openItemsSq(rows: MonthRow[], money: Money, tolerance: number): string[] {
+  const last = rows[rows.length - 1];
+  const parts: string[] = [];
+  if (last.receivablesEnd > tolerance) {
+    parts.push(`${money(last.receivablesEnd)} të paarkëtuara nga klientët (të ardhura të regjistruara, por ende jo para)`);
+  }
+  if (last.payablesEnd > tolerance) {
+    parts.push(`${money(last.payablesEnd)} të papaguara te furnitorët (para që del pas horizontit dhe nuk është zbritur nga paraja)`);
+  }
+  return parts.length > 0 ? [`Në fund të horizontit mbeten ${parts.join(' dhe ')}.`] : [];
+}
+
+function reserveBaseSq(inputs: FinancialInputs, terms: MonthlyTerms): string {
+  if (terms.ownerSalary > 0) return 'kosto fikse + paga e pronarit';
+  return inputs.includeOwnerSalary ? 'vetëm kosto fikse; paga e pronarit është 0' : 'vetëm kosto fikse; paga e pronarit nuk përfshihet';
+}
+
+const NON_FINITE_SQ =
+  'Llogaritja dha vlera jo numerike ose të pafundme, sepse disa shuma janë shumë të mëdha. Rezultatet, kapitali i nevojshëm dhe rikuperimi nuk janë të besueshme — kontrolloni çmimin, sasitë dhe kostot.';
+
 interface CapitalArgs {
   rows: MonthRow[];
   byCategory: Record<StartupCategory, number>;
   inputs: FinancialInputs;
   terms: MonthlyTerms;
   tolerance: number;
+  outlook: DeficitOutlook | null; // null when the projection is not finite
 }
 
-function capitalRequirement({ rows, byCategory, inputs, terms, tolerance }: CapitalArgs): CapitalRequirement {
-  const money = (v: number) => formatMoney(v, inputs.currency);
+function capitalRequirement({ rows, byCategory, inputs, terms, tolerance, outlook }: CapitalArgs): CapitalRequirement {
+  const money: Money = (v) => formatMoney(v, inputs.currency);
+  const horizon = rows.length;
   const startupTotal = sum(Object.values(byCategory));
   const cumulativeCash = cumulative(rows.map((r) => r.netCashFlow));
   const maxOperatingDeficit = snap(Math.max(0, -Math.min(0, ...cumulativeCash)), tolerance);
@@ -446,38 +601,93 @@ function capitalRequirement({ rows, byCategory, inputs, terms, tolerance }: Capi
   const totalRequired = startupTotal + maxOperatingDeficit + reserve;
   const gap = snap(Math.max(0, totalRequired - inputs.ownCapital), tolerance);
 
-  const deficitSq =
-    maxOperatingDeficit > 0
-      ? `Deficiti maksimal i parasë nga operimi: ${money(maxOperatingDeficit)} — shuma më e madhe kumulative që operimi konsumon para se arkëtimet ta mbulojnë (pa investimin fillestar).`
-      : 'Me këto supozime operimi nuk krijon deficit kumulativ parash brenda horizontit (deficiti maksimal = 0).';
   const explanationSq = [
     `Investimi fillestar: ${money(startupTotal)}, i paguar në muajin 0, para nisjes (inventari fillestar përfshihet këtu dhe vetëm këtu).`,
-    deficitSq,
-    `Rezerva e sigurisë: ${formatNumber(inputs.reserveMonths)} muaj × ${money(monthlyBase)} (kosto fikse + paga e pronarit) = ${money(reserve)}.`,
+    ...(outlook ? [deficitSq(maxOperatingDeficit, outlook, horizon, money)] : []),
+    `Rezerva e sigurisë: ${formatNumber(inputs.reserveMonths)} muaj × ${money(monthlyBase)} (${reserveBaseSq(inputs, terms)}) = ${money(reserve)}.`,
     `Kapitali i nevojshëm = ${money(startupTotal)} + ${money(maxOperatingDeficit)} + ${money(reserve)} = ${money(totalRequired)}. Asgjë nuk numërohet dy herë: investimi fillestar nuk përfshihet te deficiti i operimit, dhe blerjet e mallit gjatë operimit janë vetëm kosto variabël.`,
-    gap > 0
-      ? `Kapitali juaj: ${money(inputs.ownCapital)}. Mungojnë ${money(gap)} për të mbuluar kapitalin e nevojshëm.`
-      : `Kapitali juaj (${money(inputs.ownCapital)}) e mbulon kapitalin e nevojshëm me këto supozime.`,
+    ...(outlook ? [...openItemsSq(rows, money, tolerance), coverageSq(outlook, gap, inputs.ownCapital, horizon, money)] : [NON_FINITE_SQ]),
     'Nuk supozohet asnjë kredi, grant apo financim tjetër: paraja vjen vetëm nga kapitali juaj dhe nga arkëtimet nga klientët.',
   ];
   return { startupTotal, byCategory, maxOperatingDeficit, reserve, totalRequired, ownCapital: inputs.ownCapital, gap, explanationSq };
 }
 
-function paybackOf(rows: MonthRow[], startupTotal: number, horizon: number, currency: CurrencyCode, tolerance: number): PaybackResult {
-  if (startupTotal <= 0) return { recoveredInMonth: null, statementSq: 'Nuk ka investim fillestar për t’u rikuperuar.' };
-  let recovered = 0;
-  for (const row of rows) {
-    recovered += row.netCashFlow;
-    if (recovered >= startupTotal - tolerance) {
-      return {
-        recoveredInMonth: row.month,
-        statementSq: `Me këto supozime, fluksi neto i parasë nga operimi e mbulon investimin fillestar (${formatMoney(startupTotal, currency)}) në muajin ${row.month}. Kjo NUK është datë e garantuar: shitjet, çmimet, kostot dhe vonesat reale të pagesave mund ta ndryshojnë.`,
-      };
-    }
+const NOT_GUARANTEED_SQ = 'Kjo NUK është datë e garantuar: shitjet, çmimet, kostot dhe vonesat reale të pagesave mund ta ndryshojnë.';
+
+/** Index of the first month from which `values` stay ≥ `floor` through the end, or −1. */
+function sustainedFrom(values: readonly number[], floor: number): number {
+  let index = -1;
+  for (let i = values.length - 1; i >= 0 && values[i] >= floor; i--) index = i;
+  return index;
+}
+
+interface PaybackArgs {
+  rows: MonthRow[];
+  startupTotal: number;
+  maxDeficit: number;
+  currency: CurrencyCode;
+  tolerance: number;
+  finite: boolean;
+}
+
+function paybackCaveatsSq(rows: MonthRow[], finalCash: number, target: number, money: Money, tolerance: number): string[] {
+  const last = rows[rows.length - 1];
+  const caveats: string[] = [];
+  if (last.payablesEnd > tolerance) {
+    const what = target > 0 ? 'investimi nuk është ende i rikuperuar plotësisht' : 'paraja e vënë nuk është ende e rikuperuar plotësisht';
+    caveats.push(
+      finalCash - last.payablesEnd < target - tolerance
+        ? `Kujdes: kjo vlen vetëm falë kredisë nga furnitorët — në fund të horizontit u detyroheni ende ${money(last.payablesEnd)}, dhe pasi t’i paguani ${what}.`
+        : `Në fund të horizontit u detyroheni ende ${money(last.payablesEnd)} furnitorëve; pasi t’i paguani, paraja e rikuperuar zvogëlohet.`,
+    );
+  }
+  if (last.netCashFlow < -tolerance) {
+    caveats.push(`Në muajin e fundit fluksi neto i parasë është negativ (${money(last.netCashFlow)}), prandaj rikuperimi mund të humbasë pas horizontit.`);
+  }
+  return caveats;
+}
+
+/**
+ * Payback counts only when it holds: the first month from which cumulative operating cash stays at
+ * or above the startup investment until the horizon ends. Without a startup investment it measures
+ * when the owner cash consumed by an operating deficit has come back (cumulative cash ≥ 0 for good).
+ */
+function paybackOf({ rows, startupTotal, maxDeficit, currency, tolerance, finite }: PaybackArgs): PaybackResult {
+  const money: Money = (v) => formatMoney(v, currency);
+  const horizon = rows.length;
+  if (!finite) {
+    return { recoveredInMonth: null, statementSq: 'Rikuperimi nuk mund të llogaritet: projeksioni dha vlera jo numerike ose shumë të mëdha.' };
+  }
+  const deficitOnly = startupTotal <= 0;
+  if (deficitOnly && maxDeficit <= 0) {
+    return { recoveredInMonth: null, statementSq: 'Nuk ka investim fillestar dhe operimi nuk krijon deficit parash, prandaj nuk ka asgjë për t’u rikuperuar.' };
+  }
+  const target = deficitOnly ? 0 : startupTotal;
+  const cumulativeCash = cumulative(rows.map((r) => r.netCashFlow));
+  const finalCash = cumulativeCash[horizon - 1];
+  const deficitSq = `Nuk ka investim fillestar, por operimi konsumon deri në ${money(maxDeficit)} nga paraja juaj.`;
+
+  const from = sustainedFrom(cumulativeCash, target - tolerance);
+  if (from >= 0) {
+    const month = rows[from].month;
+    const lead = deficitOnly
+      ? `${deficitSq} Me këto supozime, fluksi neto kumulativ i parasë nuk është më negativ nga muaji ${month} deri në fund të horizontit: atëherë kjo para është rikuperuar.`
+      : `Me këto supozime, fluksi neto i parasë nga operimi e mbulon investimin fillestar (${money(startupTotal)}) në muajin ${month} dhe mbetet mbi të deri në fund të horizontit.`;
+    return { recoveredInMonth: month, statementSq: [lead, NOT_GUARANTEED_SQ, ...paybackCaveatsSq(rows, finalCash, target, money, tolerance)].join(' ') };
+  }
+
+  const firstReached = deficitOnly ? -1 : cumulativeCash.findIndex((c) => c >= target - tolerance);
+  if (firstReached >= 0) {
+    return {
+      recoveredInMonth: null,
+      statementSq: `Me këto supozime, fluksi neto i parasë nga operimi e arrin investimin fillestar (${money(startupTotal)}) vetëm përkohësisht, në muajin ${rows[firstReached].month}, dhe pastaj bie përsëri: në fund të horizontit (muaji ${horizon}) mbeten ${money(target - finalCash)} pa rikuperuar. Investimi nuk rikuperohet në mënyrë të qëndrueshme brenda horizontit prej ${horizon} muajsh.`,
+    };
   }
   return {
     recoveredInMonth: null,
-    statementSq: `Me këto supozime, investimi fillestar nuk rikuperohet brenda horizontit prej ${horizon} muajsh.`,
+    statementSq: deficitOnly
+      ? `${deficitSq} Me këto supozime, kjo para nuk rikuperohet brenda horizontit prej ${horizon} muajsh.`
+      : `Me këto supozime, investimi fillestar nuk rikuperohet brenda horizontit prej ${horizon} muajsh.`,
   };
 }
 
@@ -488,8 +698,12 @@ interface CashLow {
   firstNegativeMonth: number | null;
 }
 
-/** Month 0 (opening cash after startup spend) is included: being short before opening matters. */
-function cashLow(rows: MonthRow[], openingCash: number, tolerance: number): CashLow {
+/**
+ * Month 0 (opening cash after startup spend) counts in every field, the count included: being short
+ * before opening matters. A non-finite projection reports NaN / null ("—"), never the opening cash.
+ */
+function cashLow(rows: MonthRow[], openingCash: number, tolerance: number, finite: boolean): CashLow {
+  if (!finite) return { minCashBalance: Number.NaN, minCashMonth: null, monthsWithNegativeCash: Number.NaN, firstNegativeMonth: null };
   let minCashBalance = openingCash;
   let minCashMonth = 0;
   for (const row of rows) {
@@ -498,16 +712,22 @@ function cashLow(rows: MonthRow[], openingCash: number, tolerance: number): Cash
       minCashMonth = row.month;
     }
   }
+  const openingNegative = openingCash < -tolerance;
   const negative = rows.filter((r) => r.cashBalance < -tolerance);
-  const firstNegativeMonth = openingCash < -tolerance ? 0 : (negative[0]?.month ?? null);
-  return { minCashBalance, minCashMonth, monthsWithNegativeCash: negative.length, firstNegativeMonth };
+  const firstNegativeMonth = openingNegative ? 0 : (negative[0]?.month ?? null);
+  return { minCashBalance, minCashMonth, monthsWithNegativeCash: negative.length + (openingNegative ? 1 : 0), firstNegativeMonth };
 }
 
 interface WarningArgs {
+  scenario: ScenarioId;
   inputs: FinancialInputs;
+  params: ScenarioParams;
   rows: MonthRow[];
+  totals: ProjectionResult['totals'];
   terms: MonthlyTerms;
   unitEconomics: UnitEconomics;
+  capital: CapitalRequirement;
+  outlook: DeficitOutlook | null;
   low: CashLow;
   startupTotal: number;
   tolerance: number;
@@ -523,34 +743,74 @@ function negativeCashSq({ inputs, rows, low, startupTotal }: WarningArgs): strin
   return `Paraja bie nën zero në muajin ${low.firstNegativeMonth} (${money(balance)}). Me këto supozime ju duhet kapital shtesë ose ndryshim i planit (më pak kosto, çmim tjetër, nisje më e vogël).`;
 }
 
-function projectionWarnings(args: WarningArgs): string[] {
-  const { inputs, rows, terms, unitEconomics, tolerance } = args;
+function contributionSq(unitEconomics: UnitEconomics): string | null {
+  if (unitEconomics.status === 'ok') return null;
+  return unitEconomics.contributionPerUnit < 0
+    ? 'Kontributi për njësi është negativ: çdo shitje humbet para, dhe më shumë shitje e përkeqësojnë situatën. As vëllimi, as kapitali shtesë nuk e rregullojnë modelin — ndryshoni çmimin, koston ose modelin.'
+    : 'Kontributi për njësi është zero: çdo shitje mbulon vetëm koston e vet variabël dhe asgjë nga kostot fikse. Më shumë shitje nuk e ndryshojnë rezultatin — as vëllimi, as kapitali shtesë nuk e rregullojnë modelin. Ndryshoni çmimin, koston ose modelin.';
+}
+
+function paymentTermsSq({ scenario, inputs, params, terms }: WarningArgs): string[] {
   const warnings: string[] = [];
-  if (unitEconomics.status === 'kontribut_zero_ose_negativ') {
-    warnings.push(
-      'Kontributi për njësi është zero ose negativ: çdo shitje humbet para ose nuk mbulon asgjë, dhe më shumë shitje e përkeqësojnë situatën. Ndryshoni çmimin, koston ose modelin.',
-    );
-  }
-  if (rows.every((r) => r.customers === 0)) {
-    warnings.push('Skenari nuk ka asnjë klient (klientë fillestarë = 0 dhe klientë të rinj = 0), prandaj nuk ka të ardhura.');
-  } else if (inputs.unitsPerCustomerPerMonth === 0) {
-    warnings.push('Sasia për klient në muaj është 0, prandaj nuk ka shitje edhe pse ka klientë.');
-  }
   if (terms.collectionDays > LONG_COLLECTION_DAYS) {
     warnings.push(
       `Klientët paguajnë pas ${formatNumber(terms.collectionDays)} ditësh — më shumë se ${LONG_COLLECTION_DAYS} ditë. Kjo bllokon para për kohë të gjatë dhe rrit nevojën për kapital qarkullues.`,
     );
   }
+  if (terms.supplierDays > LONG_SUPPLIER_DAYS) {
+    warnings.push(
+      `Ju i paguani furnitorët pas ${formatNumber(terms.supplierDays)} ditësh — më shumë se ${LONG_SUPPLIER_DAYS} ditë. Kjo kredi e ul nevojën për para brenda horizontit; sigurohuni që furnitorët e pranojnë me shkrim, sepse pa të deficiti dhe kapitali i nevojshëm rriten.`,
+    );
+  }
+  const override = params.collectionDaysOverride;
+  if (scenario === 'konservator' && typeof override === 'number' && override < inputs.collectionDays) {
+    warnings.push(
+      `Në skenarin konservator klientët paguajnë pas ${formatNumber(override)} ditësh, më shpejt se në supozimin bazë (${formatNumber(inputs.collectionDays)} ditë). Ditët e skenarit ruhen si numër i fiksuar: nëse ndryshuat ditët bazë, përditësoni edhe këto, përndryshe skenari konservator del më i mirë se baza për paratë.`,
+    );
+  }
+  return warnings;
+}
+
+function ownerSalarySq({ inputs, terms }: WarningArgs): string | null {
+  if (!inputs.includeOwnerSalary) return 'Paga e pronarit nuk përfshihet në kosto — rezultati operativ e mbivlerëson atë që ju mbetet.';
+  if (terms.ownerSalary <= 0) {
+    return 'Paga e pronarit është 0, edhe pse është shënuar si e përfshirë: rezultati operativ nuk përmban asnjë pagë për ju dhe e mbivlerëson atë që ju mbetet.';
+  }
+  return null;
+}
+
+function projectionWarnings(args: WarningArgs): string[] {
+  const { inputs, rows, totals, unitEconomics, capital, outlook, startupTotal, tolerance } = args;
+  const money = (v: number) => formatMoney(v, inputs.currency);
+  const warnings: string[] = [];
+  if (outlook === null) warnings.push(NON_FINITE_SQ);
+  const contribution = contributionSq(unitEconomics);
+  if (contribution) warnings.push(contribution);
+  if (rows.every((r) => r.customers === 0)) {
+    warnings.push('Skenari nuk ka asnjë klient (klientë fillestarë = 0 dhe klientë të rinj = 0), prandaj nuk ka të ardhura.');
+  } else if (inputs.unitsPerCustomerPerMonth === 0) {
+    warnings.push('Sasia për klient në muaj është 0, prandaj nuk ka shitje edhe pse ka klientë.');
+  }
+  warnings.push(...paymentTermsSq(args));
   const negative = negativeCashSq(args);
   if (negative) warnings.push(negative);
+  if (outlook && !outlook.noContribution && isLowerBound(outlook)) {
+    warnings.push(
+      `Kapitali i nevojshëm (${money(capital.totalRequired)}) është minimum, jo shuma e mjaftueshme: ${notFullDeficitSq(outlook, rows.length, money)}. Zgjateni horizontin ose ndryshoni planin para se ta merrni si objektiv.`,
+    );
+  }
   const profitableButShort = rows.find((r) => r.operatingResult > tolerance && r.cashBalance < -tolerance);
   if (profitableButShort) {
     warnings.push(
       `Në muajin ${profitableButShort.month} rezultati operativ është pozitiv, por paraja është negative: fitimi nuk është i njëjtë me paratë e disponueshme (investimi fillestar dhe vonesat e arkëtimit ndikojnë te paraja).`,
     );
   }
-  if (!inputs.includeOwnerSalary) {
-    warnings.push('Paga e pronarit nuk përfshihet në kosto — rezultati operativ e mbivlerëson atë që ju mbetet.');
+  const salary = ownerSalarySq(args);
+  if (salary) warnings.push(salary);
+  if (totals.tax > tolerance && startupTotal > 0) {
+    warnings.push(
+      `Tatimi (${money(totals.tax)}) llogaritet mbi rezultatin operativ pa zbritur investimin fillestar (pa amortizim), prandaj mund të jetë i mbivlerësuar. Rregullat reale të tatimit: Kërkon verifikim lokal.`,
+    );
   }
   return warnings;
 }
@@ -581,10 +841,11 @@ export function projectScenario(rawInputs: FinancialInputs, scenario: ScenarioId
   const byCategory = startupByCategory(inputs.startupCosts, inputWarnings);
   const startupTotal = sum(Object.values(byCategory));
   const openingCash = inputs.ownCapital - startupTotal;
-  const accrual = accrualRows(inputs, params, season.values, terms);
+  const accrual = accrualRows(inputs, params, season.values, terms, inputs.horizonMonths);
   const scale = Math.max(1, inputs.ownCapital, startupTotal, sum(accrual.map((r) => r.revenue + r.variableCosts)));
   const tolerance = scale * RELATIVE_TOLERANCE;
   const rows = cashRows(accrual, terms, openingCash, tolerance);
+  const finite = allFinite(rows, openingCash);
 
   const unitEconomics = computeUnitEconomics({
     pricePerUnit: terms.price,
@@ -592,14 +853,20 @@ export function projectScenario(rawInputs: FinancialInputs, scenario: ScenarioId
     fixedCostsMonthly: terms.fixedCosts + terms.ownerSalary,
     unitsPerCustomerPerMonth: inputs.unitsPerCustomerPerMonth,
   });
-  const capital = capitalRequirement({ rows, byCategory, inputs, terms, tolerance });
-  const payback = paybackOf(rows, startupTotal, inputs.horizonMonths, inputs.currency, tolerance);
-  const low = cashLow(rows, openingCash, tolerance);
+  let outlook: DeficitOutlook | null = null;
+  if (finite) {
+    const lookahead = cashRows(accrualRows(inputs, params, season.values, terms, inputs.horizonMonths + LOOKAHEAD_MONTHS), terms, openingCash, tolerance);
+    outlook = deficitOutlook(rows, allFinite(lookahead, openingCash) ? lookahead : null, unitEconomics, tolerance);
+  }
+  const capital = capitalRequirement({ rows, byCategory, inputs, terms, tolerance, outlook });
+  const payback = paybackOf({ rows, startupTotal, maxDeficit: capital.maxOperatingDeficit, currency: inputs.currency, tolerance, finite });
+  const low = cashLow(rows, openingCash, tolerance, finite);
+  const totals = totalsOf(rows);
   const warningsSq = [
     ...new Set([
       ...inputWarnings,
       ...season.warningsSq,
-      ...projectionWarnings({ inputs, rows, terms, unitEconomics, low, startupTotal, tolerance }),
+      ...projectionWarnings({ scenario, inputs, params, rows, totals, terms, unitEconomics, capital, outlook, low, startupTotal, tolerance }),
     ]),
   ];
 
@@ -607,7 +874,7 @@ export function projectScenario(rawInputs: FinancialInputs, scenario: ScenarioId
     scenario,
     params,
     rows,
-    totals: totalsOf(rows),
+    totals,
     unitEconomics,
     capital,
     payback,
@@ -712,15 +979,20 @@ export const SENSITIVITY_COLLECTION_DAYS = 30;
 export function sensitivityAnalysis(inputs: FinancialInputs, scenario: ScenarioId = 'baze', deltaPct = 20): SensitivityItem[] {
   const delta = Number.isFinite(deltaPct) ? Math.abs(deltaPct) : 20;
   const pct = formatNumber(delta);
+  // A price or a customer count cannot fall by more than 100% and churn cannot rise by more than
+  // 100 points, so labels show the change actually applied, not the one requested.
+  const down = Math.min(delta, 100);
+  const downPct = formatNumber(down);
+  const churnPoints = Math.min(delta / 4, 100);
   const drivers: { driver: SensitivityDriver; labelSq: string; changeSq: string; shock: FinancialShock }[] = [
-    { driver: 'cmimi', labelSq: 'Çmimi për njësi', changeSq: `−${pct}%`, shock: { pricePct: -delta } },
+    { driver: 'cmimi', labelSq: 'Çmimi për njësi', changeSq: `−${downPct}%`, shock: { pricePct: -down } },
     { driver: 'kosto_variabel', labelSq: 'Kostoja variabël për njësi', changeSq: `+${pct}%`, shock: { variableCostPct: delta } },
-    { driver: 'klientet_e_rinj', labelSq: 'Klientët e rinj në muaj', changeSq: `−${pct}%`, shock: { newCustomersPct: -delta } },
+    { driver: 'klientet_e_rinj', labelSq: 'Klientët e rinj në muaj', changeSq: `−${downPct}%`, shock: { newCustomersPct: -down } },
     {
       driver: 'largimi',
       labelSq: 'Largimi mujor i klientëve',
-      changeSq: `+${formatNumber(delta / 4)} pikë përqindjeje`,
-      shock: { churnPctPoints: delta / 4 },
+      changeSq: `+${formatNumber(churnPoints)} pikë përqindjeje`,
+      shock: { churnPctPoints: churnPoints },
     },
     { driver: 'kosto_fikse', labelSq: 'Kostot fikse mujore', changeSq: `+${pct}%`, shock: { fixedCostPct: delta } },
     {
@@ -754,5 +1026,6 @@ export function sensitivityAnalysis(inputs: FinancialInputs, scenario: ScenarioI
 /** Descending by absolute value; float noise between nominally equal impacts counts as a tie. */
 function byMagnitudeDesc(a: number, b: number): number {
   const difference = Math.abs(b) - Math.abs(a);
+  if (Number.isNaN(difference)) return 0; // a non-finite projection has no meaningful rank
   return Math.abs(difference) <= RELATIVE_TOLERANCE * Math.max(1, Math.abs(a), Math.abs(b)) ? 0 : difference;
 }

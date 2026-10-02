@@ -25,7 +25,7 @@ async function run(request: Request) {
   if (!authorized(request, secret)) return jsonError(401, 'unauthorized', 'Autorizim i pavlefshëm.');
   const force = new URL(request.url).searchParams.get('force') === '1';
   const store = await getStore();
-  const report = await refreshAll({ store: store.data, now: new Date(), force });
+  const report = await refreshAll({ store: store.data, now: new Date(), force, clock: () => new Date() });
   logger.info('cron.refresh', { ok: report.okCount, errors: report.errorCount, skipped: report.skippedCount });
   return jsonOk(report);
 }

@@ -2,12 +2,14 @@
  * Sugjerime për të ulur kapitalin e nevojshëm (deterministic, greedy, explainable).
  *
  * Order of steps (each applied only while the target is still missed):
- *   1. disable optional startup lines, largest first;
- *   2. halve initial-inventory lines (start smaller, restock from real sales);
+ *   1. disable optional startup lines;
+ *   2. halve initial-inventory lines, largest first (start smaller, restock from real sales);
  *   3. reduce the safety reserve to 1 month;
- *   4. disable optional monthly lines, largest first.
- * A non-optional cost is never set to zero. When the target cannot be met the note says so plainly
- * instead of hiding costs — the business may simply not fit that capital.
+ *   4. disable optional monthly lines.
+ * Within steps 1 and 4 each pick is the smallest line that alone closes the remaining gap, or the
+ * line that cuts the most when none does. This is a greedy heuristic, not an exhaustive search for
+ * the minimum set. A non-optional cost is never set to zero. When the target cannot be met the note
+ * says so plainly instead of hiding costs — the business may simply not fit that capital.
  */
 import type { FinancialInputs, MoneyLine, ScenarioId } from '@/lib/domain/types';
 import { projectScenario } from '@/lib/finance/engine';
@@ -30,9 +32,13 @@ export interface CapitalReductionResult {
 }
 
 type Step = (draft: FinancialInputs) => CapitalChange | null;
+type LineList = 'startupCosts' | 'monthlyFixedCosts';
+
+/** Steps in a fixed order, or optional lines from which the best fit is picked at each turn. */
+type Group = { kind: 'steps'; steps: Step[] } | { kind: 'bestFit'; list: LineList; indices: number[]; reasonSq: string };
 
 const REASON_OPTIONAL_STARTUP =
-  'Zë opsional: mund të shmanget ose të shtyhet (p.sh. duke përdorur mjete që keni ose duke e blerë pasi të vijnë klientët e parë).';
+  'Zë opsional: mund të shmanget (p.sh. duke përdorur mjete që keni ose një zgjidhje më të thjeshtë). Në model kostoja hiqet plotësisht, jo shtyhet: nëse e blini më vonë, ajo para do të dalë nga arkëtimet ose nga kapitali juaj, dhe nevoja reale për kapital do të jetë më e madhe se kjo shifër.';
 const REASON_INVENTORY = 'Nisni me gjysmën e inventarit fillestar dhe rimbusheni sipas shitjeve reale — rrezik mungese malli në javët e para.';
 const REASON_RESERVE = 'Rezervë më e vogël do të thotë më pak mbrojtje nga vonesat e pagesave dhe muajt e dobët — rrezik më i lartë.';
 const REASON_OPTIONAL_MONTHLY = 'Kosto mujore opsionale: në fillim mund ta bëni vetë, por kjo kërkon kohën tuaj.';
@@ -51,7 +57,7 @@ function appendNote(line: MoneyLine, note: string): string {
   return `${line.sourceNoteSq} ${note}`.trim();
 }
 
-function disableLineStep(list: 'startupCosts' | 'monthlyFixedCosts', index: number, reasonSq: string): Step {
+function disableLineStep(list: LineList, index: number, reasonSq: string): Step {
   return (draft) => {
     const line = draft[list][index];
     if (!line?.enabled) return null;
@@ -77,17 +83,31 @@ const reserveStep: Step = (draft) => {
   return { lineId: null, labelSq: 'Rezerva e sigurisë (muaj kosto fikse)', from, to: 1, reasonSq: REASON_RESERVE };
 };
 
-/** The full, deterministic step list computed once from the starting inputs. */
-function plannedSteps(inputs: FinancialInputs): Step[] {
-  const optionalStartup = byAmountDesc(inputs.startupCosts, (l) => l.optional === true);
+/** The deterministic plan computed once from the starting inputs. */
+function plannedGroups(inputs: FinancialInputs): Group[] {
   const inventory = byAmountDesc(inputs.startupCosts, (l) => l.category === 'inventar' && l.optional !== true);
-  const optionalMonthly = byAmountDesc(inputs.monthlyFixedCosts, (l) => l.optional === true);
   return [
-    ...optionalStartup.map((i) => disableLineStep('startupCosts', i, REASON_OPTIONAL_STARTUP)),
-    ...inventory.map((i) => halveInventoryStep(i)),
-    reserveStep,
-    ...optionalMonthly.map((i) => disableLineStep('monthlyFixedCosts', i, REASON_OPTIONAL_MONTHLY)),
+    { kind: 'bestFit', list: 'startupCosts', indices: byAmountDesc(inputs.startupCosts, (l) => l.optional === true), reasonSq: REASON_OPTIONAL_STARTUP },
+    { kind: 'steps', steps: [...inventory.map((i) => halveInventoryStep(i)), reserveStep] },
+    { kind: 'bestFit', list: 'monthlyFixedCosts', indices: byAmountDesc(inputs.monthlyFixedCosts, (l) => l.optional === true), reasonSq: REASON_OPTIONAL_MONTHLY },
   ];
+}
+
+/**
+ * Among the candidate lines (ordered largest first), the smallest one whose removal alone reaches
+ * the target; otherwise the one whose removal lowers the total the most (earliest on ties).
+ */
+function bestFitIndex(draft: FinancialInputs, list: LineList, candidates: readonly number[], totalWithout: (trial: FinancialInputs) => number, target: number): number {
+  let fit: { index: number; total: number } | null = null;
+  let deepest: { index: number; total: number } | null = null;
+  for (const index of candidates) {
+    const trial = structuredClone(draft);
+    trial[list][index] = { ...trial[list][index], enabled: false };
+    const total = totalWithout(trial);
+    if (total <= target && (fit === null || total > fit.total)) fit = { index, total };
+    if (deepest === null || total < deepest.total) deepest = { index, total };
+  }
+  return (fit ?? deepest ?? { index: -1 }).index;
 }
 
 /** Proposes the smallest ordered set of reductions that brings the capital need to the target. */
@@ -105,12 +125,29 @@ export function suggestCapitalReductions(
   let total = initialTotal;
   const changes: CapitalChange[] = [];
 
-  for (const step of plannedSteps(draft)) {
-    if (total <= target + tolerance) break;
+  const totalWithout = (trial: FinancialInputs) => projectScenario(trial, scenario).capital.totalRequired;
+  const apply = (step: Step) => {
     const change = step(draft);
-    if (!change) continue;
+    if (!change) return;
     changes.push(change);
     total = totalOf();
+  };
+
+  for (const group of plannedGroups(draft)) {
+    if (group.kind === 'steps') {
+      for (const step of group.steps) {
+        if (total <= target + tolerance) break;
+        apply(step);
+      }
+      continue;
+    }
+    let remaining = group.indices.filter((i) => draft[group.list][i]?.enabled);
+    while (remaining.length > 0 && total > target + tolerance) {
+      const index = bestFitIndex(draft, group.list, remaining, totalWithout, target + tolerance);
+      if (index < 0) break;
+      remaining = remaining.filter((i) => i !== index);
+      apply(disableLineStep(group.list, index, group.reasonSq));
+    }
   }
 
   const reachesTarget = total <= target + tolerance;

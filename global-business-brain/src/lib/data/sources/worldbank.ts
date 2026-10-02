@@ -95,7 +95,7 @@ interface WbMeta {
   per_page?: number | string;
   total?: number | string;
   lastupdated?: string;
-  message?: { id?: string; key?: string; value?: string }[];
+  message?: unknown[]; // error payload entries: {id, key, value}, untrusted
 }
 
 interface WbIndicatorRow {
@@ -132,18 +132,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Remote text ends up in the fetch log and the UI; keep it short and single-line. */
+const MAX_REMOTE_DETAIL = 200;
+
+function remoteDetail(parts: unknown[]): string {
+  const text = parts
+    .filter((p): p is string => typeof p === 'string' && p.trim() !== '')
+    .join(' — ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > MAX_REMOTE_DETAIL ? `${text.slice(0, MAX_REMOTE_DETAIL - 1)}…` : text;
+}
+
 /** WB returns `[{"message":[…]}]` for invalid requests, often with HTTP 200. */
 function assertNoErrorPayload(json: unknown, url: string): void {
   if (!Array.isArray(json) || !isRecord(json[0])) return;
   const messages = (json[0] as WbMeta).message;
   if (!Array.isArray(messages) || messages.length === 0) return;
-  const m = messages[0] ?? {};
-  const detail = [m.key, m.value].filter(Boolean).join(' — ');
+  const m = isRecord(messages[0]) ? messages[0] : {};
+  const detail = remoteDetail([m.key, m.value]);
+  const id = remoteDetail([m.id]).slice(0, 20);
   throw new SourceError({
     kind: 'parse',
     url,
-    message: `World Bank error ${m.id ?? ''}: ${detail}`,
-    messageSq: `Banka Botërore e refuzoi kërkesën${m.id ? ` (kodi ${m.id})` : ''}: ${detail || 'pa përshkrim'}. Kontrolloni kodin e treguesit dhe parametrat.`,
+    message: `World Bank error ${id}: ${detail}`,
+    messageSq: `Banka Botërore e refuzoi kërkesën${id ? ` (kodi ${id})` : ''}: ${detail || 'pa përshkrim'}. Kontrolloni kodin e treguesit dhe parametrat.`,
   });
 }
 

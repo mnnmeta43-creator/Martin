@@ -80,3 +80,19 @@ describe('suggestCapitalReductions', () => {
     expect(r.inputs).not.toBe(inputs);
   });
 });
+
+describe('suggestCapitalReductions — best fit', () => {
+  it('disables the smallest optional line that alone reaches the target, not the largest', () => {
+    // Need 800 → 750: dropping the 50 test alone is enough; the 300 laptop is kept.
+    const r = suggestCapitalReductions(inputs, 750);
+    expect(r.changes.map((c) => [c.lineId, c.from, c.to])).toEqual([['testim', 50, 0]]);
+    expect(r.resultingTotal).toBe(750);
+    expect(r.inputs.startupCosts.find((l) => l.id === 'laptop')?.enabled).toBe(true);
+  });
+
+  it('says a removed optional cost is gone from the model, not postponed', () => {
+    const r = suggestCapitalReductions(inputs, 750);
+    expect(r.changes[0].reasonSq).toContain('hiqet plotësisht, jo shtyhet');
+    expect(r.changes[0].reasonSq).not.toContain('shtyhet (');
+  });
+});

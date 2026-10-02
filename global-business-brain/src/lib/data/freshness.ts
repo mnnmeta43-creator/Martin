@@ -100,7 +100,7 @@ function ageAssessment(def: IndicatorDefinition, latest: Observation, now: Date)
   if (age === 'i_vjeter') {
     return {
       status: age,
-      reasonSq: `Vlera e fundit i përket periudhës ${period}. Ky tregues zakonisht publikohet me vonesë deri në ${durationSq(lag, parsed.granularity)}, ndaj të dhënat janë më të vjetra se sa pritet.`,
+      reasonSq: `Vlera e fundit i përket periudhës ${period}. Ky tregues zakonisht publikohet me vonesë deri në ${durationSq(lag, parsed.granularity)}, ndaj të dhënat janë më të vjetra sesa pritet.`,
     };
   }
   return {

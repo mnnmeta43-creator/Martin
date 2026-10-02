@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { BusinessArchetype } from '@/lib/domain/types';
 import { buildFinancialInputs, type BuildContext } from '@/lib/finance/build';
 import { projectScenario } from '@/lib/finance/engine';
 import { FINANCE_ARCHETYPE, FIXTURE_FX_RATES, FIXTURE_PRICE_LEVEL_CITATION } from '../../fixtures/financeArchetype';
+import { plain } from './helpers';
 
 // Fixture rate: 1 USD = 0.5 EUR (synthetic), dated 2026-10-01.
 const CTX: BuildContext = {
@@ -129,15 +131,26 @@ describe('buildFinancialInputs — price level', () => {
   const result = build({ priceLevel });
   const { inputs } = result;
 
-  it('scales only locally priced lines plus price and variable cost', () => {
+  it('scales only locally priced lines and the price; the unit variable cost stays unscaled by default', () => {
     const startup = byId(inputs.startupCosts);
     const monthly = byId(inputs.monthlyFixedCosts);
     expect(monthly['qira']).toMatchObject({ low: 30, high: 60, amount: 45 }); // 100–200 × 0.5 × 0.6
     expect(startup['testim-tregu'].amount).toBeCloseTo(12, 10); // (20 + 60)/2 × 0.5 × 0.6
     expect(monthly['software'].amount).toBe(10); // traded good: not scaled
     expect(startup['pajisje-baze'].amount).toBe(100); // not scaled
-    expect(inputs.pricePerUnit).toBeCloseTo(6, 10);
-    expect(inputs.variableCostPerUnit).toBeCloseTo(1.2, 10);
+    expect(inputs.pricePerUnit).toBeCloseTo(6, 10); // 20 × 0.5 × 0.6
+    // Treated as traded (materials, hosting): 4 USD × 0.5, not × 0.6 — avoids understating it.
+    expect(inputs.variableCostPerUnit).toBe(2);
+    expect(inputs.assumptionsNotesSq.find((n) => n.startsWith('Niveli i çmimeve'))).toContain('Kostoja variabël për njësi NUK u shumëzua');
+  });
+
+  it('scales the unit variable cost only when the archetype flags it as local labour or services', () => {
+    // The flag is optional and not yet declared on BusinessArchetype, hence the cast.
+    const labour = { ...FINANCE_ARCHETYPE, pricing: { ...FINANCE_ARCHETYPE.pricing, variableCostScalesWithPriceLevel: true } } as BusinessArchetype;
+    const flagged = buildFinancialInputs(labour, { ...CTX, priceLevel });
+    if (!flagged.ok) throw new Error(flagged.reasonSq);
+    expect(flagged.inputs.variableCostPerUnit).toBeCloseTo(1.2, 10); // 4 × 0.5 × 0.6
+    expect(flagged.inputs.assumptionsNotesSq.find((n) => n.startsWith('Niveli i çmimeve'))).not.toContain('NUK u shumëzua');
   });
 
   it('never applies it silently: notes on each affected line and in the assumptions, with the period', () => {
@@ -198,5 +211,47 @@ describe('buildFinancialInputs — FX edge cases', () => {
     const result = build({ today: '2026-10-20' });
     expect(result.warningsSq.some((w) => w.includes('më i vjetër se 7 ditë'))).toBe(true);
     expect(result.inputs.assumptionsNotesSq.some((n) => n.startsWith('Kursi i këmbimit:'))).toBe(true);
+  });
+});
+
+describe('buildFinancialInputs — range and provenance of price, unit variable cost and owner salary', () => {
+  it('writes the converted low–base–high range, currency, source and date into the saved notes', () => {
+    const { inputs } = build();
+    // price 10–30 USD and variable 2–6 USD × 0.5
+    const note = inputs.assumptionsNotesSq.find((n) => n.startsWith('Çmimi për njësi'));
+    expect(plain(note ?? '')).toBe(
+      'Çmimi për njësi (vizitë shërbimi): 10,00 € (diapazoni 5,00 €–15,00 €); kostoja variabël për njësi: 2,00 € (diapazoni 1,00 €–3,00 €). Modeli përdor vlerën bazë; diapazoni tregon sa mund të ndryshojë. Supozim i përgjithshëm i bibliotekës (2026-10-02), konvertuar nga USD me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (ecb-frankfurter). Vlera sintetike testi.',
+    );
+  });
+
+  it('returns the same facts in structured form', () => {
+    const result = build();
+    expect(result.unitAssumptions.pricePerUnit).toMatchObject({ value: 10, low: 5, high: 15, currency: 'EUR', sourceKind: 'supozim', date: '2026-10-02' });
+    expect(result.unitAssumptions.variableCostPerUnit).toMatchObject({ value: 2, low: 1, high: 3, currency: 'EUR', sourceKind: 'supozim', date: '2026-10-02' });
+    expect(result.unitAssumptions.pricePerUnit.value).toBe(result.inputs.pricePerUnit);
+    expect(result.unitAssumptions.variableCostPerUnit.value).toBe(result.inputs.variableCostPerUnit);
+    expect(result.unitAssumptions.ownerSalaryMonthly).toBeNull();
+  });
+
+  it('scales the price range with the price level but leaves the variable-cost range unscaled', () => {
+    const result = build({ priceLevel: { factor: 0.6, citation: FIXTURE_PRICE_LEVEL_CITATION } });
+    expect(result.unitAssumptions.pricePerUnit.low).toBeCloseTo(3, 10);
+    expect(result.unitAssumptions.pricePerUnit.high).toBeCloseTo(9, 10);
+    expect(result.unitAssumptions.variableCostPerUnit).toMatchObject({ low: 1, high: 3, value: 2 });
+  });
+
+  it('records the owner salary as the user’s own value with a date', () => {
+    const result = build({ ownerIncomeNeedMonthly: 800 });
+    expect(result.unitAssumptions.ownerSalaryMonthly).toMatchObject({ value: 800, low: null, high: null, currency: 'EUR', sourceKind: 'perdoruesi', date: '2026-10-02' });
+    expect(result.inputs.assumptionsNotesSq.map(plain)).toContain(
+      'Paga e pronarit: 800,00 € në muaj, nga nevoja juaj e deklaruar për të ardhura (vlerë e përdoruesit, 2 tetor 2026).',
+    );
+  });
+
+  it('explains that the conservative collection days are base + 15 and must be updated with the base', () => {
+    const { inputs } = build();
+    expect(inputs.assumptionsNotesSq).toContain(
+      'Skenari konservator: klientët paguajnë 15 ditë më vonë se në supozimin bazë (10 + 15 = 25 ditë). Nëse ndryshoni ditët bazë, përditësoni edhe ditët e skenarit konservator.',
+    );
   });
 });

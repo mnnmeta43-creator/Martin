@@ -105,6 +105,9 @@ export async function createSession(store: Store, userId: string, now: Date): Pr
   const token = newSessionToken();
   const expiresAt = sessionExpiry(now).toISOString();
   await store.sessions.create(userId, hashToken(token), expiresAt);
+  // Housekeeping at the natural write point (sign-in, registration, every new guest), so expired
+  // sessions never pile up even when no scheduler is configured. Uses the expires_at index.
+  await store.sessions.deleteExpired(now.toISOString());
   return { token, expiresAt };
 }
 

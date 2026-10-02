@@ -134,9 +134,16 @@ describe('assertSameOrigin', () => {
     expect(assertSameOrigin(noOrigin())?.status).toBe(403);
   });
 
-  it('skips the check for requests carrying an Authorization header (not CSRF-able)', () => {
+  it('skips the check only for bearer tokens, which browsers never attach on their own', () => {
     const cron = new Request(`${URL_BASE}/api/cron/refresh`, { method: 'POST', headers: { authorization: 'Bearer x' } });
     expect(assertSameOrigin(cron)).toBeNull();
+    const basic = new Request(`${URL_BASE}/api/x`, {
+      method: 'POST',
+      headers: { authorization: 'Basic dXNlcjpwYXNz', origin: 'https://evil.invalid' },
+    });
+    expect(assertSameOrigin(basic)?.status).toBe(403);
+    const emptyBearer = new Request(`${URL_BASE}/api/x`, { method: 'POST', headers: { authorization: 'Bearer ' } });
+    expect(assertSameOrigin(emptyBearer)?.status).toBe(403);
   });
 });
 

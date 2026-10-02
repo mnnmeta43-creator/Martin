@@ -22,6 +22,8 @@ interface Args {
 }
 
 function loadEnvFiles(): void {
+  // process.loadEnvFile exists from Node 20.12; on older runtimes the env must come from the shell.
+  if (typeof process.loadEnvFile !== 'function') return;
   for (const file of ['.env.local', '.env']) {
     const full = path.join(process.cwd(), file);
     // process.loadEnvFile does not overwrite variables that are already set.

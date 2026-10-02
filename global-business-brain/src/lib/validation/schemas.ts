@@ -185,7 +185,7 @@ export const scoreWeightsSchema = z
   .superRefine((w, ctx) => {
     const sum = SCORE_KEYS.reduce((acc, key) => acc + w[key], 0);
     if (sum !== 100) {
-      ctx.addIssue({ code: 'custom', message: `Peshat duhet të mblidhen saktësisht në 100 (tani mblidhen në ${sum}).` });
+      ctx.addIssue({ code: 'custom', message: `Shuma e peshave duhet të jetë saktësisht 100 (tani është ${sum}).` });
     }
   });
 export type ScoreWeightsInput = z.infer<typeof scoreWeightsSchema>;

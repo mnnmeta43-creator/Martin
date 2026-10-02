@@ -5,11 +5,15 @@
  * This module converts them with a stored FX rate, optionally adjusts locally-priced items by a
  * cited price-level factor, and writes the provenance of every number into its note so nothing is
  * applied silently. If no FX rate exists the build fails honestly instead of guessing.
+ *
+ * `FinancialInputs` keeps price, unit variable cost and owner salary as bare numbers, so their range,
+ * source and date travel in `assumptionsNotesSq` (which is persisted) and in `unitAssumptions`.
  */
 import type {
   BusinessArchetype,
   Citation,
   CostItemTemplate,
+  CostSourceKind,
   CurrencyCode,
   FinancialInputs,
   FxRate,
@@ -20,7 +24,7 @@ import type {
 } from '@/lib/domain/types';
 import { assetLabel } from '@/lib/domain/taxonomy';
 import { convert, rateTextSq, type FxConversionOk } from '@/lib/finance/currency';
-import { formatNumber, formatPeriod } from '@/lib/finance/format';
+import { formatMoney, formatNumber, formatPeriod } from '@/lib/finance/format';
 import { formatIsoDateSq } from '@/lib/finance/locale';
 
 export interface PriceLevelAdjustment {
@@ -39,9 +43,41 @@ export interface BuildContext {
   today: IsoDate; // reference date for FX staleness
 }
 
+/** Value, range, currency, source and date of a model number that is not a `MoneyLine`. */
+export interface UnitAssumption {
+  value: number;
+  low: number | null;
+  high: number | null;
+  currency: CurrencyCode;
+  sourceKind: CostSourceKind;
+  sourceNoteSq: string;
+  date: IsoDate;
+}
+
+export interface UnitAssumptions {
+  pricePerUnit: UnitAssumption;
+  variableCostPerUnit: UnitAssumption;
+  ownerSalaryMonthly: UnitAssumption | null; // null when no owner income need was given
+}
+
 export type BuildResult =
-  | { ok: true; inputs: FinancialInputs; warningsSq: string[]; appliedPriceLevel: PriceLevelAdjustment | null }
+  | {
+      ok: true;
+      inputs: FinancialInputs;
+      warningsSq: string[];
+      appliedPriceLevel: PriceLevelAdjustment | null;
+      unitAssumptions: UnitAssumptions;
+    }
   | { ok: false; reasonSq: string };
+
+/**
+ * Optional archetype flag: true when the unit variable cost is local labour or services. Without it
+ * the cost is treated as traded (materials, hosting) and NOT scaled by the local price level, which
+ * avoids understating costs in low-price countries.
+ */
+type PricingAssumptions = BusinessArchetype['pricing'] & { variableCostScalesWithPriceLevel?: boolean };
+
+type UsdRange = { low: number; base: number; high: number };
 
 export const PRICE_LEVEL_MIN = 0.25;
 export const PRICE_LEVEL_MAX = 1.5;
@@ -122,6 +158,24 @@ function resolvePriceLevel(level: PriceLevelAdjustment | null | undefined, warni
   return { factor, citation: level.citation };
 }
 
+function scaledRange(range: UsdRange, factor: number): UsdRange {
+  return { low: range.low * factor, base: range.base * factor, high: range.high * factor };
+}
+
+function rangeSq(range: UsdRange, currency: CurrencyCode): string {
+  return `${formatMoney(range.base, currency)} (diapazoni ${formatMoney(range.low, currency)}–${formatMoney(range.high, currency)})`;
+}
+
+function priceLevelNoteSq(level: PriceLevelAdjustment, variableScaled: boolean): string {
+  const scaled = variableScaled
+    ? 'kostot lokale (qira, punë, shërbime), çmimi për njësi dhe kostoja variabël për njësi'
+    : 'kostot lokale (qira, punë, shërbime) dhe çmimi për njësi';
+  const variableSq = variableScaled
+    ? ''
+    : ' Kostoja variabël për njësi NUK u shumëzua: supozohet mall ose shërbim me çmim ndërkombëtar (p.sh. materiale, hostim). Nëse te ju është punë lokale, ndryshojeni sipas ofertave.';
+  return `Niveli i çmimeve: ${scaled} u shumëzuan me faktorin ${formatNumber(level.factor, 2)} nga ${level.citation.sourceName} (periudha ${citationPeriodSq(level.citation)}). Kjo është supozim: çmimet lokale të shërbimeve priren të ndjekin nivelin e përgjithshëm të çmimeve, por duhet verifikuar.${variableSq}`;
+}
+
 function scenarioFromRamp(ramp: Ramp, defaults: (typeof SCENARIO_DEFAULTS)[keyof typeof SCENARIO_DEFAULTS], collectionDays: number): ScenarioParams {
   return {
     startCustomers: ramp.startCustomers,
@@ -172,22 +226,45 @@ export function buildFinancialInputs(archetype: BusinessArchetype, ctx: BuildCon
   };
   const ownerIncome = cleanMoney(ctx.ownerIncomeNeedMonthly, 'nevoja mujore për të ardhura të pronarit', warningsSq);
   const includeOwnerSalary = ownerIncome > 0;
-  const unitFactor = fx.rate * (priceLevel ? priceLevel.factor : 1);
-  const { pricing } = archetype;
+  const pricing: PricingAssumptions = archetype.pricing;
+  const levelFactor = priceLevel ? priceLevel.factor : 1;
+  const variableScaled = priceLevel !== null && pricing.variableCostScalesWithPriceLevel === true;
+  const price = scaledRange(pricing.priceUSD, fx.rate * levelFactor);
+  const variable = scaledRange(pricing.variableCostUSD, fx.rate * (variableScaled ? levelFactor : 1));
+  const konservatorDays = SCENARIO_DEFAULTS.konservator.extraCollectionDays;
 
+  const unitNoteSq = [
+    `Çmimi për njësi (${pricing.unitLabelSq}): ${rangeSq(price, currency)}; kostoja variabël për njësi: ${rangeSq(variable, currency)}. Modeli përdor vlerën bazë; diapazoni tregon sa mund të ndryshojë.`,
+    lineCtx.conversionSq,
+    pricing.noteSq,
+  ].join(' ');
+  const ownerSalaryNoteSq = `Paga e pronarit: ${formatMoney(ownerIncome, currency)} në muaj, nga nevoja juaj e deklaruar për të ardhura (vlerë e përdoruesit, ${formatIsoDateSq(ctx.today)}).`;
   const assumptionsNotesSq = [
     `${lineCtx.conversionSq} Këto nuk janë çmime të verifikuara: zëvendësojini me oferta reale sapo t’i keni.`,
-    `Çmimi dhe kostoja variabël për njësi (${pricing.unitLabelSq}): ${pricing.noteSq}`,
-    ...(priceLevel
-      ? [
-          `Niveli i çmimeve: kostot lokale (qira, punë, shërbime), çmimi për njësi dhe kostoja variabël për njësi u shumëzuan me faktorin ${formatNumber(priceLevel.factor, 2)} nga ${priceLevel.citation.sourceName} (periudha ${citationPeriodSq(priceLevel.citation)}). Kjo është supozim: çmimet lokale të shërbimeve priren të ndjekin nivelin e përgjithshëm të çmimeve, por duhet verifikuar.`,
-        ]
-      : []),
+    unitNoteSq,
+    ...(priceLevel ? [priceLevelNoteSq(priceLevel, variableScaled)] : []),
     'Tatimi mbi fitimin: Kërkon verifikim lokal (vendosur 0%)',
-    ...(includeOwnerSalary ? [] : ['Paga e pronarit nuk përfshihet — rezultati operativ e mbivlerëson atë që ju mbetet.']),
+    includeOwnerSalary ? ownerSalaryNoteSq : 'Paga e pronarit nuk përfshihet — rezultati operativ e mbivlerëson atë që ju mbetet.',
+    `Skenari konservator: klientët paguajnë ${konservatorDays} ditë më vonë se në supozimin bazë (${pricing.collectionDays} + ${konservatorDays} = ${pricing.collectionDays + konservatorDays} ditë). Nëse ndryshoni ditët bazë, përditësoni edhe ditët e skenarit konservator.`,
     `Sezonaliteti: ${archetype.seasonalityNoteSq}`,
     ...fx.warningsSq.map((w) => `Kursi i këmbimit: ${w}`),
   ];
+  const libraryAssumption = (range: UsdRange): UnitAssumption => ({
+    value: range.base,
+    low: range.low,
+    high: range.high,
+    currency,
+    sourceKind: 'supozim',
+    sourceNoteSq: unitNoteSq,
+    date: archetype.assumptionsDate,
+  });
+  const unitAssumptions: UnitAssumptions = {
+    pricePerUnit: libraryAssumption(price),
+    variableCostPerUnit: libraryAssumption(variable),
+    ownerSalaryMonthly: includeOwnerSalary
+      ? { value: ownerIncome, low: null, high: null, currency, sourceKind: 'perdoruesi', sourceNoteSq: ownerSalaryNoteSq, date: ctx.today }
+      : null,
+  };
 
   const inputs: FinancialInputs = {
     currency,
@@ -195,8 +272,8 @@ export function buildFinancialInputs(archetype: BusinessArchetype, ctx: BuildCon
     monthlyFixedCosts: archetype.monthlyFixedCosts.map((t) => buildLine(t, lineCtx)),
     includeOwnerSalary,
     ownerSalaryMonthly: ownerIncome,
-    pricePerUnit: pricing.priceUSD.base * unitFactor,
-    variableCostPerUnit: pricing.variableCostUSD.base * unitFactor,
+    pricePerUnit: price.base,
+    variableCostPerUnit: variable.base,
     unitLabelSq: pricing.unitLabelSq,
     unitsPerCustomerPerMonth: pricing.unitsPerCustomerPerMonth,
     collectionDays: pricing.collectionDays,
@@ -215,5 +292,5 @@ export function buildFinancialInputs(archetype: BusinessArchetype, ctx: BuildCon
     assumptionsNotesSq,
   };
 
-  return { ok: true, inputs, warningsSq, appliedPriceLevel: priceLevel };
+  return { ok: true, inputs, warningsSq, appliedPriceLevel: priceLevel, unitAssumptions };
 }

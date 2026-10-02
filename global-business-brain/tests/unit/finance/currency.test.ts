@@ -179,3 +179,27 @@ describe('convertInputs', () => {
     expect(r).toEqual({ ok: false, reasonSq: 'Nuk ka kurs këmbimi të ruajtur për USD→JPY. Vendosni kursin manualisht ose rifreskoni burimin.' });
   });
 });
+
+describe('roundMoney — values JavaScript prints in exponent form', () => {
+  it('returns 0 for float noise and tiny values instead of NaN', () => {
+    expect(roundMoney(0.1 + 0.2 - 0.3, 'EUR')).toBe(0);
+    expect(roundMoney(1e-7, 'EUR')).toBe(0);
+    expect(Object.is(roundMoney(-1e-7, 'EUR'), 0)).toBe(true); // +0, never −0
+    expect(roundMoney(-3.5e-15, 'EUR')).toBe(0);
+    expect(roundMoney(1e-7, 'JPY')).toBe(0);
+    expect(roundMoney(0.004, 'EUR')).toBe(0);
+  });
+
+  it('still rounds half a minor unit away from zero at the threshold', () => {
+    expect(roundMoney(0.005, 'EUR')).toBe(0.01);
+    expect(roundMoney(-0.005, 'EUR')).toBe(-0.01);
+    expect(roundMoney(0.5, 'JPY')).toBe(1);
+    expect(roundMoney(12345678.905, 'EUR')).toBe(12345678.91);
+  });
+
+  it('returns very large values unchanged (no fractional precision left) instead of NaN', () => {
+    expect(roundMoney(1e21, 'EUR')).toBe(1e21);
+    expect(roundMoney(-1.2e21, 'JPY')).toBe(-1.2e21);
+    expect(roundMoney(2 ** 60, 'EUR')).toBe(2 ** 60);
+  });
+});

@@ -6,7 +6,7 @@
  */
 import type { CurrencyCode, IndicatorDefinition } from '@/lib/domain/types';
 import { currencyMinorUnits } from '@/lib/finance/currency';
-import { formatDatePartsSq, formatIsoDateSq, MISSING_SQ, MONTHS_SQ, numberFormat } from '@/lib/finance/locale';
+import { formatDatePartsSq, formatIsoDateSq, hasImpossibleDatePrefix, MISSING_SQ, MONTHS_SQ, numberFormat } from '@/lib/finance/locale';
 
 export interface FormatMoneyOptions {
   decimals?: number; // default: the currency's minor units (EUR 2, JPY 0)
@@ -149,6 +149,8 @@ function zonedParts(date: Date, timeZone: string): ZonedParts {
 }
 
 function parseInstant(iso: string): Date | null {
+  // Date.parse rolls impossible days over (2026-02-31 → 3 March); show them as missing instead.
+  if (hasImpossibleDatePrefix(iso)) return null;
   const time = Date.parse(iso);
   return Number.isFinite(time) ? new Date(time) : null;
 }

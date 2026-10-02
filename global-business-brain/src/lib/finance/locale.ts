@@ -46,15 +46,36 @@ export interface DateParts {
   day: number;
 }
 
-/** Parses the calendar part of "YYYY-MM-DD" (optionally followed by a time) without time-zone shifts. */
-export function parseIsoDateParts(iso: string): DateParts | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
-  if (!match) return null;
+const ISO_DATE_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/;
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+function validParts(match: RegExpExecArray): DateParts | null {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return null;
   return { year, month, day };
+}
+
+/**
+ * Parses a date-only "YYYY-MM-DD" string without time-zone shifts. Strings with a time part return
+ * null on purpose: which calendar day a timestamp falls on depends on the zone (see `formatDate`).
+ * Impossible dates such as 2026-02-31 return null instead of rolling over into the next month.
+ */
+export function parseIsoDateParts(iso: string): DateParts | null {
+  const trimmed = iso.trim();
+  const match = ISO_DATE_PREFIX.exec(trimmed);
+  return match && match[0].length === trimmed.length ? validParts(match) : null;
+}
+
+/** True when the string starts with a YYYY-MM-DD that is not a real calendar date (e.g. "2026-02-31T10:00Z"). */
+export function hasImpossibleDatePrefix(iso: string): boolean {
+  const match = ISO_DATE_PREFIX.exec(iso.trim());
+  return match !== null && validParts(match) === null;
 }
 
 /** "2026-10-02" → "2 tetor 2026". */

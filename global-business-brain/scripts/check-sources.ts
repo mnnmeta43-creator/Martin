@@ -1,10 +1,11 @@
 /**
  * Kontrollon nëse faqet e burimeve dhe lidhjet zyrtare janë të arritshme (npm run sources:check).
  *
- * HEAD-checks (falling back to GET) every https homepage and API base in SOURCES and every
- * OFFICIAL_LINKS url, a few hosts at a time with per-host spacing. Meant for environments with
- * open internet access: where an egress policy or proxy blocks a host, the result is reported as
- * BLLOKUAR (HTTP 403/407) rather than as a broken link. It only reads; it changes nothing, and
+ * HEAD-checks (falling back to GET) every external homepage and documentation page in SOURCES
+ * and every OFFICIAL_LINKS url, a few hosts at a time with per-host spacing. API base paths are
+ * skipped because many answer 404 at their root. Meant for environments with open internet
+ * access: where an egress policy or proxy blocks a host, the result is reported as BLLOKUAR
+ * (HTTP 403/407) rather than as a broken link. It only reads; it changes nothing, and
  * OFFICIAL_LINKS.lastCheckedAt stays null until a person verifies the content of each page.
  */
 import { HostRateLimiter, probeUrl, type ProbeResult } from '@/lib/data/http';

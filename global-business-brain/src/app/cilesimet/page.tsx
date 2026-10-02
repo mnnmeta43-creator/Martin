@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
   const viewer = await getViewer();
   const config = configStatus();
-  const missing = config.filter((c) => !c.present);
+  const missing = config.filter((c) => !c.present && c.featureOffWhenMissing);
   return (
     <>
       <PageHeader title="Cilësimet" />
