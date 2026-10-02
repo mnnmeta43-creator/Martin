@@ -166,7 +166,8 @@ function userFacingError(err: unknown): { status: number; messageSq: string } | 
   return { status: clientStatus, messageSq };
 }
 
-function pathOf(request: Request): string {
+function pathOf(request: Request | null): string {
+  if (!request) return '?';
   try {
     return new URL(request.url).pathname;
   } catch {
@@ -174,35 +175,50 @@ function pathOf(request: Request): string {
   }
 }
 
-export function errorToResponse(err: unknown, request: Request): Response {
+/**
+ * Duck-typed so a NextRequest, a Request from another realm (tests, polyfills) or a plain
+ * Request all count; route handlers without a request argument simply skip request-based steps.
+ */
+function isRequestLike(value: unknown): value is Request {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as { method?: unknown; url?: unknown; headers?: { get?: unknown } };
+  return typeof candidate.method === 'string' && typeof candidate.url === 'string' && typeof candidate.headers?.get === 'function';
+}
+
+export function errorToResponse(err: unknown, request: Request | null): Response {
+  const method = request?.method ?? '?';
   if (err instanceof HttpError) {
-    if (err.status >= 500) logger.warn('route.http_error', { method: request.method, path: pathOf(request), code: err.code });
+    if (err.status >= 500) logger.warn('route.http_error', { method, path: pathOf(request), code: err.code });
     return jsonError(err.status, err.code, err.messageSq, err.details);
   }
   if (err instanceof ZodError) return validationErrorResponse(err);
   const userFacing = userFacingError(err);
   if (userFacing) return jsonError(userFacing.status, 'kerkese_e_pavlefshme', userFacing.messageSq);
-  logger.error('route.unhandled_error', { method: request.method, path: pathOf(request), error: err });
+  logger.error('route.unhandled_error', { method, path: pathOf(request), error: err });
   return jsonError(500, 'gabim_i_brendshem', MESSAGES_SQ.internal);
 }
 
 /**
- * Wraps a route handler: optional same-origin check, then error mapping —
- * UnauthorizedError → 401, ConfigError → 503 (Albanian explanation), any HttpError → its status,
- * ZodError → 400 with Albanian issues, other errors → 500 generic message + redacted log.
+ * Wraps a route handler and passes every argument through unchanged (request, and for dynamic
+ * routes the `{ params }` context), so the wrapped export keeps the exact signature Next.js
+ * type-checks. Steps: optional same-origin check (when the first argument is a request), then
+ * error mapping — UnauthorizedError → 401, ConfigError → 503 (Albanian explanation), any other
+ * HttpError → its status, ZodError → 400 with Albanian issues, other errors → 500 generic
+ * Albanian message + redacted log.
  */
-export function handleRoute<Ctx = unknown>(
-  fn: (request: Request, ctx: Ctx) => Promise<Response> | Response,
+export function handleRoute<A extends unknown[]>(
+  fn: (...args: A) => Promise<Response> | Response,
   options: HandleRouteOptions = {},
-): (request: Request, ctx: Ctx) => Promise<Response> {
+): (...args: A) => Promise<Response> {
   const checkOrigin = options.checkOrigin ?? true;
-  return async (request: Request, ctx: Ctx) => {
+  return async (...args: A) => {
+    const request = isRequestLike(args[0]) ? args[0] : null;
     try {
-      if (checkOrigin) {
+      if (checkOrigin && request) {
         const rejected = assertSameOrigin(request);
         if (rejected) return rejected;
       }
-      return await fn(request, ctx);
+      return await fn(...args);
     } catch (err) {
       return errorToResponse(err, request);
     }

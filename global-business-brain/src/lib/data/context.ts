@@ -4,8 +4,9 @@
  * Real economies read only stored, non-demo observations. Demo economies (ZZA/ZZB/ZZC) exist
  * only when `demoMode` is on and are generated in memory — demo data is never read from or
  * written to the real tables. Every tracked indicator gets a series; an absent one has status
- * 'mungon' and no value, never 0. The batch variant reads the store once for all codes, so the
- * country catalogue can show coverage for every economy in one pass.
+ * 'mungon' and no value, never 0. The batch variant uses a fixed number of batched store reads
+ * (observations, latest fetch logs, FX rates, country metadata) whatever the number of codes, so
+ * the country catalogue can show coverage for every economy without one query per country.
  */
 import type {
   Country,
@@ -107,20 +108,45 @@ interface RealData {
   sourceErrors: FetchLogEntry[];
 }
 
-async function loadRealData(store: DataStore, codes: CountryCode[]): Promise<RealData> {
-  const [observations, fxObservations, latestLogList, storedFx, meta] = await Promise.all([
+/**
+ * From this many economies on (e.g. the catalogue, ~250 codes) one unfiltered read replaces the
+ * country-filtered read plus the FX read: the filtered read would return almost every row anyway,
+ * and the FX rows would otherwise be transferred twice.
+ */
+export const FULL_READ_MIN_COUNTRIES = 25;
+
+interface ObservationReads {
+  own: Observation[]; // rows of the requested economies
+  fx: Observation[]; // WB exchange-rate rows of every economy
+}
+
+/** Batched reads only: one or two queries in total, never one per country. */
+async function readObservations(store: DataStore, codes: CountryCode[]): Promise<ObservationReads> {
+  if (codes.length >= FULL_READ_MIN_COUNTRIES) {
+    const all = await store.getObservations({ includeDemo: false });
+    const wanted = new Set(codes);
+    return { own: all.filter((o) => wanted.has(o.countryCode)), fx: all.filter((o) => o.indicatorCode === FX_INDICATOR) };
+  }
+  const [own, fx] = await Promise.all([
     store.getObservations({ countryCodes: codes, includeDemo: false }),
     // Rates for every currency, not just these countries: conversions may need any of them.
     store.getObservations({ indicatorCodes: [FX_INDICATOR], includeDemo: false }),
+  ]);
+  return { own, fx };
+}
+
+async function loadRealData(store: DataStore, codes: CountryCode[]): Promise<RealData> {
+  const [reads, latestLogList, storedFx, meta] = await Promise.all([
+    readObservations(store, codes),
     store.getLatestFetchLogs(),
     store.getFxRates(),
     store.getCountryMeta(),
   ]);
   // Defence in depth: a demo row must never leak into a real economy, whatever the store does.
-  const real = observations.filter((o) => !o.isDemo && !DEMO_COUNTRY_CODES.has(o.countryCode));
+  const real = reads.own.filter((o) => !o.isDemo && !DEMO_COUNTRY_CODES.has(o.countryCode));
   const latestLogs = new Map(latestLogList.map((l) => [logKey(l.sourceId, l.scope), l]));
   const derived = fxRatesFromWbAnnual(
-    fxObservations.filter((o) => !o.isDemo),
+    reads.fx.filter((o) => !o.isDemo && !DEMO_COUNTRY_CODES.has(o.countryCode)),
     getCountries(),
   );
   const fxRates = [...storedFx.filter((r) => r.kind !== 'demo' && r.sourceId !== 'demo'), ...derived];

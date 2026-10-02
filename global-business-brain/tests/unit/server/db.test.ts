@@ -1,7 +1,7 @@
 /**
  * Database layer: migrations, transactions, type parsing, target selection and the getDb singleton.
  */
-import { mkdtempSync, rmSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -11,6 +11,7 @@ import {
   createPgliteDb,
   getDb,
   getLastMigrationResult,
+  isInMemoryPgliteDir,
   MISSING_DATABASE_MESSAGE_SQ,
   resolveDbTarget,
   runMigrations,
@@ -115,6 +116,31 @@ describe('Db', () => {
       await fileDb.close();
     } finally {
       rmSync(parent, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('PGlite in-memory mode', () => {
+  it('treats undefined, blank and "memory://" as in-memory, anything else as a folder', () => {
+    expect(isInMemoryPgliteDir(undefined)).toBe(true);
+    expect(isInMemoryPgliteDir('')).toBe(true);
+    expect(isInMemoryPgliteDir('memory://')).toBe(true);
+    expect(isInMemoryPgliteDir(' memory://emri ')).toBe(true);
+    expect(isInMemoryPgliteDir('.data/pglite')).toBe(false);
+  });
+
+  it('"memory://" opens a working database without creating a folder on disk', async () => {
+    const cwd = mkdtempSync(path.join(os.tmpdir(), 'gbb-cwd-'));
+    const spy = vi.spyOn(process, 'cwd').mockReturnValue(cwd);
+    try {
+      const mem = await createPgliteDb('memory://');
+      await runMigrations(mem, { dir: MIGRATIONS_DIR });
+      expect((await mem.query<{ n: number }>('SELECT count(*)::int AS n FROM users')).rows[0].n).toBe(0);
+      await mem.close();
+      expect(readdirSync(cwd)).toEqual([]);
+    } finally {
+      spy.mockRestore();
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 });

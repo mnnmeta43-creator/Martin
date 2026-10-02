@@ -126,23 +126,25 @@ export function createPgDb(url: string, options: PgDbOptions = {}): Db {
   };
 }
 
-function isVirtualPgliteDir(dir: string): boolean {
-  return dir.startsWith('memory://') || dir.startsWith('idb://');
+/** "memory://" (with or without a name) means an in-memory database, never a folder on disk. */
+export function isInMemoryPgliteDir(dataDir: string | undefined): boolean {
+  return dataDir === undefined || dataDir.trim() === '' || dataDir.trim().startsWith('memory://');
 }
 
-/** Embedded Postgres (WASM). `dataDir` undefined → in-memory; a path is created if missing. */
+/**
+ * Embedded Postgres (WASM). `dataDir` undefined or "memory://" → in-memory (lost on restart);
+ * any other value is a filesystem path relative to the app root, created when missing.
+ */
 export async function createPgliteDb(dataDir?: string): Promise<Db> {
   const { PGlite } = await import('@electric-sql/pglite');
   const parsers = { [DATE_OID]: (value: string) => value };
   let instance: InstanceType<typeof PGlite>;
-  if (dataDir && !isVirtualPgliteDir(dataDir)) {
-    const absolute = path.resolve(process.cwd(), dataDir);
+  if (dataDir === undefined || isInMemoryPgliteDir(dataDir)) {
+    instance = new PGlite({ parsers });
+  } else {
+    const absolute = path.resolve(process.cwd(), dataDir.trim());
     mkdirSync(absolute, { recursive: true });
     instance = new PGlite(absolute, { parsers });
-  } else if (dataDir) {
-    instance = new PGlite(dataDir, { parsers });
-  } else {
-    instance = new PGlite({ parsers });
   }
   await instance.waitReady;
 
