@@ -45,6 +45,43 @@ and viewable in the Netlify dashboard, and you can enable an email
 notification per submission under **Site settings > Forms > Form
 notifications**. No database is required.
 
+## Login / account registration app (`public/voltex-installueshem/`)
+
+Alongside the simple email-capture form above, `public/voltex-installueshem/`
+is an installable (PWA) version of the app with real account login and
+registration — sign up with email + password, confirm the email, log in/out,
+and reset a forgotten password. Sessions persist on Android, iPhone and
+desktop. It's linked from the homepage nav ("Hyr / Krijo llogari") and from
+the registration section, and doesn't change anything else on the site.
+
+Auth is powered by [Supabase](https://supabase.com):
+
+- `public/voltex-installueshem/auth.js` / `auth.css` — the login/signup UI
+  that gates the app until the user is signed in.
+- `public/voltex-installueshem/supabase-config.js` — generated at build time
+  by `scripts/generate-config.js` from the `SUPABASE_URL` and
+  `SUPABASE_ANON_KEY` environment variables (same pattern as the Lemon
+  Squeezy checkout URL above). Set them in Netlify: **Site settings >
+  Environment variables**.
+- `public/voltex-installueshem/install.html`, `manifest.webmanifest`,
+  `service-worker.js` — PWA install prompt and offline app shell.
+
+Setup:
+
+1. Create a project in Supabase and, under **Project Settings > API**, copy
+   the Project URL and the `anon` public key.
+2. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in Netlify's environment
+   variables (see `.env.example`), then redeploy.
+3. In Supabase, under **Authentication > URL Configuration**, set:
+   - Site URL: `https://<your-site>.netlify.app/voltex-installueshem/`
+   - Redirect URLs: `https://<your-site>.netlify.app/voltex-installueshem/**`
+
+The `anon` public key is safe to expose in frontend code. Never put a
+`service_role` key, API secret, or Lemon Squeezy API key in these files. This
+app registers/authenticates users but doesn't automatically grant Premium
+after a Lemon Squeezy purchase — that still requires the webhook +
+storage described above.
+
 ## Local development
 
 ```bash

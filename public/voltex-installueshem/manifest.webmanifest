@@ -1,0 +1,23 @@
+{
+  "id": "/voltex-installueshem/",
+  "name": "VOLTEX",
+  "short_name": "VOLTEX",
+  "description": "Aplikacion teknik për formula, komponentë, diagnostifikim dhe projekte elektrike.",
+  "lang": "sq",
+  "start_url": "/voltex-installueshem/",
+  "scope": "/voltex-installueshem/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#10141a",
+  "theme_color": "#ff5c00",
+  "categories": ["utilities", "education", "productivity"],
+  "icons": [
+    {"src": "icons/voltex-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icons/voltex-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Diagnostifikim", "short_name": "Diagnostifikim", "url": "/voltex-installueshem/#diagnostics", "icons": [{"src": "icons/voltex-192.png", "sizes": "192x192"}]},
+    {"name": "Formula", "short_name": "Formula", "url": "/voltex-installueshem/#calc", "icons": [{"src": "icons/voltex-192.png", "sizes": "192x192"}]}
+  ]
+}
