@@ -189,11 +189,13 @@ describe('payback — must hold until the end of the horizon', () => {
     expect(plain(r.payback.statementSq)).toContain('mbeten 40,00 € pa rikuperuar');
   });
 
-  it('without startup costs, measures when the owner cash consumed by the operating deficit is back', () => {
+  it('without startup costs, says when the owner cash consumed by the operating deficit is back', () => {
     // Growth example without startup: cumulative −50 … −130 (m5) … −18 (m9), +40 (m10) … +192.
     const r = projectScenario(makeGrowthInputs({ startupCosts: [] }), 'baze');
-    expect(r.payback.recoveredInMonth).toBe(10);
+    // The field stays the startup payback month (null here); the month is in the statement.
+    expect(r.payback.recoveredInMonth).toBeNull();
     expect(plain(r.payback.statementSq)).toContain('operimi konsumon deri në 130,00 € nga paraja juaj');
+    expect(r.payback.statementSq).toContain('nuk është më negativ nga muaji 10 deri në fund të horizontit');
     expect(r.payback.statementSq).toContain('NUK është datë e garantuar');
     const notYet = projectScenario(makeGrowthInputs({ startupCosts: [], horizonMonths: 9 }), 'baze');
     expect(notYet.payback.recoveredInMonth).toBeNull();

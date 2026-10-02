@@ -110,7 +110,7 @@ function bestFitIndex(draft: FinancialInputs, list: LineList, candidates: readon
   return (fit ?? deepest ?? { index: -1 }).index;
 }
 
-/** Proposes the smallest ordered set of reductions that brings the capital need to the target. */
+/** Proposes a short, ordered set of reductions (greedy, see above) that brings the capital need to the target. */
 export function suggestCapitalReductions(
   inputs: FinancialInputs,
   targetTotalRequired: number,

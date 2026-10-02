@@ -73,7 +73,7 @@ export const FORMULAS_SQ: readonly string[] = [
   'Kapitali i nevojshëm = investimi fillestar + deficiti maksimal i parasë nga operimi + rezerva',
   `Kapitali i nevojshëm është minimum, jo shuma e mjaftueshme, kur paraja kumulative është ende në rënie në muajin e fundit, kur bie më poshtë nëse të njëjtat supozime vazhdojnë edhe ${LOOKAHEAD_MONTHS} muaj pas horizontit, ose kur kontributi për njësi është zero ose negativ.`,
   'Mungesa e kapitalit = max(0, kapitali i nevojshëm − kapitali vetjak). Nuk supozohet asnjë kredi, grant apo financim tjetër.',
-  'Rikuperimi i investimit = muaji i parë nga i cili fluksi neto kumulativ i parasë nga operimi mbetet ≥ investimi fillestar deri në fund të horizontit; nëse arrihet dhe pastaj humbet, nuk numërohet si rikuperim. Pa investim fillestar matet kthimi i deficitit të operimit (fluksi kumulativ nuk është më negativ). Është vlerësim, jo datë e garantuar.',
+  'Rikuperimi i investimit = muaji i parë nga i cili fluksi neto kumulativ i parasë nga operimi mbetet ≥ investimi fillestar deri në fund të horizontit; nëse arrihet dhe pastaj humbet, nuk numërohet si rikuperim. Pa investim fillestar nuk ka muaj rikuperimi; teksti tregon kur kthehet paraja e konsumuar nga deficiti i operimit (fluksi kumulativ nuk është më negativ). Është vlerësim, jo datë e garantuar.',
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -649,8 +649,9 @@ function paybackCaveatsSq(rows: MonthRow[], finalCash: number, target: number, m
 
 /**
  * Payback counts only when it holds: the first month from which cumulative operating cash stays at
- * or above the startup investment until the horizon ends. Without a startup investment it measures
- * when the owner cash consumed by an operating deficit has come back (cumulative cash ≥ 0 for good).
+ * or above the startup investment until the horizon ends. Without a startup investment
+ * `recoveredInMonth` stays null (other modules read it as the startup payback month) and the
+ * statement says when the owner cash consumed by an operating deficit has come back.
  */
 function paybackOf({ rows, startupTotal, maxDeficit, currency, tolerance, finite }: PaybackArgs): PaybackResult {
   const money: Money = (v) => formatMoney(v, currency);
@@ -673,7 +674,10 @@ function paybackOf({ rows, startupTotal, maxDeficit, currency, tolerance, finite
     const lead = deficitOnly
       ? `${deficitSq} Me këto supozime, fluksi neto kumulativ i parasë nuk është më negativ nga muaji ${month} deri në fund të horizontit: atëherë kjo para është rikuperuar.`
       : `Me këto supozime, fluksi neto i parasë nga operimi e mbulon investimin fillestar (${money(startupTotal)}) në muajin ${month} dhe mbetet mbi të deri në fund të horizontit.`;
-    return { recoveredInMonth: month, statementSq: [lead, NOT_GUARANTEED_SQ, ...paybackCaveatsSq(rows, finalCash, target, money, tolerance)].join(' ') };
+    return {
+      recoveredInMonth: deficitOnly ? null : month,
+      statementSq: [lead, NOT_GUARANTEED_SQ, ...paybackCaveatsSq(rows, finalCash, target, money, tolerance)].join(' '),
+    };
   }
 
   const firstReached = deficitOnly ? -1 : cumulativeCash.findIndex((c) => c >= target - tolerance);
