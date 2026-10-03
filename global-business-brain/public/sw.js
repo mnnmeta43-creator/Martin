@@ -3,7 +3,7 @@
  * Offline = viewing pages and project snapshots already seen on this device, labelled with their date.
  * It never pretends to be live analysis: API calls are never cached, and the offline banner is shown.
  */
-const VERSION = 'gbb-v1';
+const VERSION = 'gbb-v2';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const PRECACHE = ['/offline', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon.svg'];
@@ -28,8 +28,10 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Only public, non-personal pages are cached. Project pages are never cached here: their offline copy is
+// the dated snapshot in localStorage, which is scoped to the signed-in user and cleared on logout.
 function isCacheablePage(url) {
-  return url.pathname === '/' || url.pathname.startsWith('/projektet') || url.pathname.startsWith('/ide') || url.pathname.startsWith('/shtetet');
+  return url.pathname.startsWith('/shtetet') || url.pathname === '/burimet';
 }
 
 self.addEventListener('fetch', (event) => {

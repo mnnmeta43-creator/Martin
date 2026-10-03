@@ -8,6 +8,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { refreshAll } from '../../src/lib/data/refresh';
 import { getStore } from '../../src/lib/server/store';
 import { logger } from '../../src/lib/server/logger';
+import { purgeOldGuests } from '../../src/lib/server/maintenance';
 
 function authorized(req: Request, secret: string): boolean {
   const given = Buffer.from((req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, ''));
@@ -24,5 +25,6 @@ export default async (req: Request, _context: Context) => {
   const force = new URL(req.url).searchParams.get('force') === '1';
   const store = await getStore();
   const report = await refreshAll({ store: store.data, now: new Date(), force, clock: () => new Date() });
-  logger.info('refresh.done', { ok: report.okCount, errors: report.errorCount, skipped: report.skippedCount });
+  const purgedGuests = await purgeOldGuests(store);
+  logger.info('refresh.done', { ok: report.okCount, errors: report.errorCount, skipped: report.skippedCount, purgedGuests });
 };

@@ -92,6 +92,8 @@ export interface Store {
     findById(id: string): Promise<UserRecord | null>;
     upgradeGuest(id: string, email: string, passwordHash: string): Promise<UserRecord | null>;
     delete(id: string): Promise<boolean>; // cascades to all user data
+    /** Deletes guest accounts created before `createdBefore` that have no unexpired session. */
+    purgeInactiveGuests(createdBefore: IsoTimestamp, now: IsoTimestamp): Promise<number>;
   };
   sessions: {
     create(userId: string, tokenHash: string, expiresAt: IsoTimestamp): Promise<SessionRecord>;
@@ -133,6 +135,8 @@ export interface Store {
   chat: {
     list(userId: string, projectId: string | null, limit?: number): Promise<AssistantMessage[]>;
     append(userId: string, projectId: string | null, messages: AssistantMessage[]): Promise<void>;
+    /** Keeps only the newest `keep` messages of one conversation. */
+    prune(userId: string, projectId: string | null, keep: number): Promise<number>;
   };
   rateLimit: {
     /** Records a hit and returns the number of hits for `key` in the current fixed window. */

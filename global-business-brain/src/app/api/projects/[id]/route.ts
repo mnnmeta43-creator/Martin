@@ -22,7 +22,7 @@ export const PATCH = handleRoute(async (request: Request, ctx: Ctx) => {
   const g = await guard(request, { limit: 'write' });
   if (!g.ok) return g.response;
   const { id } = await ctx.params;
-  const body = await parseJsonBody(request, patchSchema);
+  const body = await parseJsonBody(request, patchSchema, { maxBytes: 128 * 1024 });
   if (!body.ok) return body.response;
   const current = await g.store.projects.get(g.user.id, id);
   if (!current) return notFound('Projekti nuk u gjet.');

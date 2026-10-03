@@ -9,6 +9,7 @@ import { getStore } from '@/lib/server/store';
 import { getCurrentUser } from '@/lib/server/session';
 import type { Store, UserRecord } from '@/lib/server/store/types';
 import { logger } from '@/lib/server/logger';
+import { ConfigError } from '@/lib/server/errors';
 
 export interface Viewer {
   store: Store | null;
@@ -27,10 +28,11 @@ export async function getViewer(): Promise<Viewer> {
   try {
     store = await getStore();
   } catch (err) {
+    // Only our own configuration message is shown; driver errors may contain hosts or user names.
     storeErrorSq =
-      err instanceof Error && err.message
+      err instanceof ConfigError && err.message
         ? err.message
-        : 'Databaza nuk është e disponueshme. Llogaritë, profilet dhe projektet nuk mund të ruhen.';
+        : 'Databaza nuk është e disponueshme për momentin. Llogaritë, profilet dhe projektet nuk mund të ruhen. Provoni sërish pak më vonë.';
     logger.error('viewer.store_unavailable', { error: err instanceof Error ? err.message : String(err) });
   }
   let user: UserRecord | null = null;

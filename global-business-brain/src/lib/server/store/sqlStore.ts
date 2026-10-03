@@ -304,6 +304,18 @@ function usersApi(db: Db): Store['users'] {
       const { rows } = await db.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
       return rows.length > 0;
     },
+    async purgeInactiveGuests(createdBefore, now) {
+      // Cascades remove the guests' profiles, projects, tasks, evidence and chat.
+      const { rows } = await db.query(
+        `DELETE FROM users u
+          WHERE u.is_guest
+            AND u.created_at < $1::timestamptz
+            AND NOT EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = u.id AND s.expires_at > $2::timestamptz)
+          RETURNING u.id`,
+        [createdBefore, now],
+      );
+      return rows.length;
+    },
   };
 }
 
@@ -615,6 +627,22 @@ function chatApi(db: Db): Store['chat'] {
           batch.flatMap((m) => [userId, projectId, m.role, m.content]),
         );
       }
+    },
+    async prune(userId, projectId, keep) {
+      if (!isUuid(userId)) return 0;
+      if (projectId !== null && !isUuid(projectId)) return 0;
+      const n = Math.max(0, Math.floor(keep));
+      const { rows } = await db.query(
+        `DELETE FROM chat_messages
+          WHERE user_id = $1 AND project_id IS NOT DISTINCT FROM $2::uuid
+            AND id NOT IN (
+              SELECT id FROM chat_messages
+               WHERE user_id = $1 AND project_id IS NOT DISTINCT FROM $2::uuid
+               ORDER BY id DESC LIMIT $3)
+          RETURNING id`,
+        [userId, projectId, n],
+      );
+      return rows.length;
     },
   };
 }

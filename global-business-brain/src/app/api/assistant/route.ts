@@ -3,7 +3,7 @@ import { runAssistant } from '@/lib/ai/assistant';
 import { isDemoMode } from '@/lib/data/demo/dataset';
 import { getEnv } from '@/lib/server/env';
 import { handleRoute, jsonOk, parseJsonBody } from '@/lib/server/http';
-import { guard } from '../_shared';
+import { guard, QUOTAS } from '../_shared';
 
 export const runtime = 'nodejs';
 
@@ -30,5 +30,6 @@ export const POST = handleRoute(async (request: Request) => {
     env: { apiKey: env.ANTHROPIC_API_KEY ?? null, model: env.ANTHROPIC_MODEL ?? null, demoMode: isDemoMode() },
     now: new Date(),
   });
+  await g.store.chat.prune(g.user.id, body.data.projectId ?? null, QUOTAS.chatMessagesKept);
   return jsonOk(reply);
 });

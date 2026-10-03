@@ -4,8 +4,8 @@
  * Windows are aligned to multiples of `windowMs` since the epoch, so every server instance agrees
  * on the current window without coordination. Keys are built by callers, e.g.
  * `auth:${clientKey(request)}` or `assistant:${user.id}`.
- * Note: x-forwarded-for is only trustworthy behind a proxy that overwrites it (Vercel, Netlify,
- * nginx with real_ip); otherwise a client can pick its own key.
+ * The client IP comes from headers the hosting platform sets (Netlify: x-nf-client-connection-ip).
+ * The left-most x-forwarded-for entry is client-controlled and is never used.
  */
 import type { Store } from '@/lib/server/store/types';
 import { jsonError } from '@/lib/server/http';
@@ -24,8 +24,12 @@ export interface RateLimitResult {
 const MINUTE = 60_000;
 
 export const RATE_LIMITS = {
-  auth: { limit: 10, windowMs: 10 * MINUTE },
-  assistant: { limit: 30, windowMs: 10 * MINUTE },
+  auth: { limit: 10, windowMs: 10 * MINUTE }, // per client IP (login, register)
+  loginEmail: { limit: 10, windowMs: 60 * MINUTE }, // per target email (password guessing across IPs)
+  guest: { limit: 20, windowMs: 10 * MINUTE }, // guest accounts per client IP
+  assistant: { limit: 30, windowMs: 10 * MINUTE }, // per user
+  assistantIp: { limit: 60, windowMs: 10 * MINUTE }, // per client IP, across guest accounts
+  assistantGlobal: { limit: 3000, windowMs: 24 * 60 * MINUTE }, // whole site per day: caps AI spend
   export: { limit: 20, windowMs: 10 * MINUTE },
   write: { limit: 120, windowMs: 10 * MINUTE },
   refresh: { limit: 3, windowMs: 60 * MINUTE },
@@ -50,11 +54,21 @@ export async function rateLimit(store: Store, key: string, rule: RateLimitRule, 
 
 const MAX_KEY_PART = 64;
 
-/** Client IP for rate-limit keys: first x-forwarded-for entry, then x-real-ip, else 'unknown'. */
+/**
+ * Client IP for rate-limit keys. Platform headers first (Netlify sets x-nf-client-connection-ip,
+ * which clients cannot override), then x-real-ip, then the RIGHT-most x-forwarded-for entry (the
+ * one appended by the nearest proxy). The left-most entry is chosen by the client and is ignored.
+ */
 export function clientKey(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const platform = request.headers.get('x-nf-client-connection-ip')?.trim();
   const realIp = request.headers.get('x-real-ip')?.trim();
-  const ip = forwarded || realIp || 'unknown';
+  const forwarded = request.headers
+    .get('x-forwarded-for')
+    ?.split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .pop();
+  const ip = platform || realIp || forwarded || 'unknown';
   return ip.slice(0, MAX_KEY_PART);
 }
 

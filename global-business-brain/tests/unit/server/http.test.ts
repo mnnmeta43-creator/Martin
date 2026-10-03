@@ -134,9 +134,12 @@ describe('assertSameOrigin', () => {
     expect(assertSameOrigin(noOrigin())?.status).toBe(403);
   });
 
-  it('skips the check only for bearer tokens, which browsers never attach on their own', () => {
-    const cron = new Request(`${URL_BASE}/api/cron/refresh`, { method: 'POST', headers: { authorization: 'Bearer x' } });
-    expect(assertSameOrigin(cron)).toBeNull();
+  it('never skips the check because of an Authorization header (the cron route opts out explicitly)', () => {
+    const cron = new Request(`${URL_BASE}/api/cron/refresh`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer x', origin: 'https://evil.invalid' },
+    });
+    expect(assertSameOrigin(cron)?.status).toBe(403);
     const basic = new Request(`${URL_BASE}/api/x`, {
       method: 'POST',
       headers: { authorization: 'Basic dXNlcjpwYXNz', origin: 'https://evil.invalid' },

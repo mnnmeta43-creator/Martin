@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { apiFetch } from '@/lib/client/api';
+import { clearOfflineData } from '@/lib/client/offline';
 import { Button } from '@/components/ui/Button';
 import { FieldError, Input, Label } from '@/components/ui/Field';
 import { cx } from '@/components/ui/cx';
@@ -34,6 +35,8 @@ export function AuthForm({ isGuest }: { isGuest: boolean }) {
       setError(res.messageSq);
       return;
     }
+    // A different person may be signing in on this device: drop the previous offline copies.
+    if (mode === 'login') clearOfflineData();
     router.push('/');
     router.refresh();
   }

@@ -177,7 +177,7 @@ export function createFakeStore(seed: Partial<FakeData> = {}): Store & { state: 
   return {
     state,
     kind: 'pglite',
-    users: { createGuest: unused, create: unused, findByEmail: unused, findById: unused, upgradeGuest: unused, delete: unused },
+    users: { createGuest: unused, create: unused, findByEmail: unused, findById: unused, upgradeGuest: unused, delete: unused, purgeInactiveGuests: unused },
     sessions: { create: unused, findByTokenHash: unused, delete: unused, deleteForUser: unused, deleteExpired: unused },
     profiles: {
       get: async (userId) => state.profiles.get(userId) ?? null,
@@ -206,6 +206,7 @@ export function createFakeStore(seed: Partial<FakeData> = {}): Store & { state: 
         if (projectId !== null && !owned(userId, projectId)) return;
         for (const message of messages) state.chat.push({ userId, projectId, message });
       },
+      prune: async () => 0,
     },
     rateLimit: { hit: unused },
     data,

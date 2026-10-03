@@ -1,6 +1,6 @@
 import { registerSchema } from '@/lib/validation/schemas';
-import { createSession, hashPassword } from '@/lib/server/auth';
-import { getCurrentUser, setSessionCookie } from '@/lib/server/session';
+import { hashPassword } from '@/lib/server/auth';
+import { getCurrentUser, startSession } from '@/lib/server/session';
 import { handleRoute, jsonError, jsonOk, parseJsonBody } from '@/lib/server/http';
 import { guardPublic } from '../../_shared';
 
@@ -20,7 +20,6 @@ export const POST = handleRoute(async (request: Request) => {
     current && current.isGuest ? await g.store.users.upgradeGuest(current.id, email, passwordHash) : await g.store.users.create(email, passwordHash);
   if (!user) return jsonError(500, 'register_failed', 'Regjistrimi dështoi. Provoni sërish.');
   await g.store.sessions.deleteForUser(user.id);
-  const { token, expiresAt } = await createSession(g.store, user.id, new Date());
-  await setSessionCookie(token, expiresAt);
+  await startSession(user.id, new Date());
   return jsonOk({ user: { id: user.id, email: user.email, isGuest: false } }, { status: 201 });
 });

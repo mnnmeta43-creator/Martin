@@ -130,17 +130,11 @@ function configuredAppUrl(): string | undefined {
 /**
  * CSRF check for state-changing requests. Returns a 403 Response to send, or null when allowed.
  * - Safe methods (GET/HEAD/OPTIONS) pass.
- * - Requests with an "Authorization: Bearer …" header pass: browsers never attach a bearer token
- *   on their own and cannot set one cross-site without a CORS preflight (which this app never
- *   grants); the route must still verify it (e.g. the cron endpoint checks CRON_SECRET).
- *   Basic credentials do NOT bypass the check, because browsers re-send cached Basic auth
- *   automatically (e.g. a staging site behind HTTP auth).
  * - Otherwise the Origin host must equal the request host or APP_URL's host. Without Origin,
  *   only Sec-Fetch-Site 'same-origin' or 'none' (typed URL / bookmark) is accepted.
  */
 export function assertSameOrigin(request: Request, options: { appUrl?: string } = {}): Response | null {
   if (SAFE_METHODS.has(request.method.toUpperCase())) return null;
-  if (/^Bearer\s+\S/i.test(request.headers.get('authorization') ?? '')) return null;
   const origin = request.headers.get('origin');
   if (origin && origin !== 'null') {
     const originHost = hostOf(origin);

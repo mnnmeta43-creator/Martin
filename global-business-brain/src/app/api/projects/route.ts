@@ -3,7 +3,7 @@ import { createProjectSchema, financialInputsSchema, manualFxSchema } from '@/li
 import { isDemoMode } from '@/lib/data/demo/dataset';
 import { handleRoute, jsonError, jsonOk, parseJsonBody } from '@/lib/server/http';
 import { createProjectFromIdea, ProjectInputError } from '../../_lib/projects';
-import { guard } from '../_shared';
+import { guard, QUOTAS } from '../_shared';
 
 const bodySchema = createProjectSchema.extend({
   financialInputs: financialInputsSchema.optional(),
@@ -20,8 +20,11 @@ export const GET = handleRoute(async (request: Request) => {
 export const POST = handleRoute(async (request: Request) => {
   const g = await guard(request, { limit: 'write' });
   if (!g.ok) return g.response;
-  const body = await parseJsonBody(request, bodySchema);
+  const body = await parseJsonBody(request, bodySchema, { maxBytes: 128 * 1024 });
   if (!body.ok) return body.response;
+  if ((await g.store.projects.list(g.user.id)).length >= QUOTAS.projectsPerUser) {
+    return jsonError(409, 'quota', `Keni arritur kufirin prej ${QUOTAS.projectsPerUser} projektesh. Fshini një projekt të vjetër për të krijuar një të ri.`);
+  }
   const profile = await g.store.profiles.get(g.user.id);
   const now = new Date();
   try {

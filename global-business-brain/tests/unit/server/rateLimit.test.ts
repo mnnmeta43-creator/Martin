@@ -46,7 +46,11 @@ describe('rateLimit', () => {
   it('exports the documented default rules', () => {
     expect(RATE_LIMITS).toEqual({
       auth: { limit: 10, windowMs: 600_000 },
+      loginEmail: { limit: 10, windowMs: 3_600_000 },
+      guest: { limit: 20, windowMs: 600_000 },
       assistant: { limit: 30, windowMs: 600_000 },
+      assistantIp: { limit: 60, windowMs: 600_000 },
+      assistantGlobal: { limit: 3000, windowMs: 86_400_000 },
       export: { limit: 20, windowMs: 600_000 },
       write: { limit: 120, windowMs: 600_000 },
       refresh: { limit: 3, windowMs: 3_600_000 },
@@ -68,10 +72,23 @@ describe('rateLimit', () => {
 describe('clientKey', () => {
   const req = (headers: Record<string, string>) => new Request('https://app.example.invalid/api/x', { headers });
 
-  it('uses the first x-forwarded-for address, then x-real-ip, then "unknown"', () => {
-    expect(clientKey(req({ 'x-forwarded-for': ' 203.0.113.7 , 10.0.0.1', 'x-real-ip': '198.51.100.1' }))).toBe('203.0.113.7');
+  it('uses x-real-ip, then the right-most (proxy-appended) x-forwarded-for address, then "unknown"', () => {
+    expect(clientKey(req({ 'x-forwarded-for': ' 203.0.113.7 , 10.0.0.1', 'x-real-ip': '198.51.100.1' }))).toBe('198.51.100.1');
+    expect(clientKey(req({ 'x-forwarded-for': ' 203.0.113.7 , 10.0.0.1' }))).toBe('10.0.0.1');
     expect(clientKey(req({ 'x-real-ip': '198.51.100.1' }))).toBe('198.51.100.1');
     expect(clientKey(req({}))).toBe('unknown');
     expect(clientKey(req({ 'x-forwarded-for': 'a'.repeat(500) }))).toHaveLength(64);
+  });
+});
+
+describe('clientKey trusts only platform-set addresses', () => {
+  it('prefers x-nf-client-connection-ip and ignores the client-chosen left-most x-forwarded-for entry', async () => {
+    const { clientKey } = await import('@/lib/server/rateLimit');
+    const spoofed = new Request('https://app.test/api/x', { headers: { 'x-forwarded-for': '1.2.3.4, 10.0.0.9' } });
+    expect(clientKey(spoofed)).toBe('10.0.0.9');
+    const netlify = new Request('https://app.test/api/x', {
+      headers: { 'x-forwarded-for': '1.2.3.4, 10.0.0.9', 'x-nf-client-connection-ip': '203.0.113.7' },
+    });
+    expect(clientKey(netlify)).toBe('203.0.113.7');
   });
 });

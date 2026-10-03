@@ -1,6 +1,6 @@
 import { evidenceInputSchema } from '@/lib/validation/schemas';
-import { handleRoute, jsonOk, parseJsonBody } from '@/lib/server/http';
-import { guard, notFound } from '../../../_shared';
+import { handleRoute, jsonError, jsonOk, parseJsonBody } from '@/lib/server/http';
+import { guard, notFound, QUOTAS } from '../../../_shared';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,6 +19,11 @@ export const POST = handleRoute(async (request: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const body = await parseJsonBody(request, evidenceInputSchema);
   if (!body.ok) return body.response;
+  const existing = await g.store.evidence.list(g.user.id, id);
+  if (!existing) return notFound('Projekti nuk u gjet.');
+  if (existing.length >= QUOTAS.evidencePerProject) {
+    return jsonError(409, 'quota', `Ky projekt ka arritur kufirin prej ${QUOTAS.evidencePerProject} provash.`);
+  }
   const entry = await g.store.evidence.add(g.user.id, id, body.data);
   if (!entry) return notFound('Projekti nuk u gjet.');
   return jsonOk({ evidence: entry }, { status: 201 });

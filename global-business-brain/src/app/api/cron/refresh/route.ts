@@ -4,6 +4,7 @@ import { getEnv } from '@/lib/server/env';
 import { handleRoute, jsonError, jsonOk } from '@/lib/server/http';
 import { logger } from '@/lib/server/logger';
 import { getStore } from '@/lib/server/store';
+import { purgeOldGuests } from '@/lib/server/maintenance';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -26,9 +27,11 @@ async function run(request: Request) {
   const force = new URL(request.url).searchParams.get('force') === '1';
   const store = await getStore();
   const report = await refreshAll({ store: store.data, now: new Date(), force, clock: () => new Date() });
-  logger.info('cron.refresh', { ok: report.okCount, errors: report.errorCount, skipped: report.skippedCount });
-  return jsonOk(report);
+  const purgedGuests = await purgeOldGuests(store);
+  logger.info('cron.refresh', { ok: report.okCount, errors: report.errorCount, skipped: report.skippedCount, purgedGuests });
+  return jsonOk({ ...report, purgedGuests });
 }
 
-export const POST = handleRoute(run);
-export const GET = handleRoute(run);
+// Authenticated by the bearer secret above (no cookies), so the browser same-origin check does not apply.
+export const POST = handleRoute(run, { checkOrigin: false });
+export const GET = handleRoute(run, { checkOrigin: false });
