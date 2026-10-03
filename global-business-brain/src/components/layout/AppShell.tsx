@@ -44,12 +44,14 @@ export function AppShell({ children, user, demoMode }: { children: React.ReactNo
       <div className="lg:pl-64">
         <header className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
-            <Link href="/" className="flex items-center gap-2 lg:hidden">
+            <Link href="/" className="flex min-w-0 items-center gap-2 lg:hidden" aria-label="Global Business Brain — paneli">
               <Logo />
-              <span className="text-sm font-semibold leading-tight text-ink">Global Business Brain</span>
+              <span className="truncate text-sm font-semibold text-ink">
+                <span className="hidden min-[400px]:inline">Global </span>Business Brain
+              </span>
             </Link>
             <div className="hidden text-sm text-muted lg:block">Zbulo ku ka mundësi. Kupto pse. Ndërto biznesin nga zero.</div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               {demoMode ? (
                 <Link
                   href="/burimet#demo"
@@ -64,8 +66,17 @@ export function AppShell({ children, user, demoMode }: { children: React.ReactNo
                   {user.email}
                 </Link>
               ) : (
-                <Link href="/hyr" className="rounded-full border border-accent/60 px-3 py-1 text-xs font-medium text-accent-strong hover:bg-accent-soft">
-                  {user?.isGuest ? 'Ruaj llogarinë' : 'Hyr'}
+                <Link
+                  href="/hyr"
+                  className="whitespace-nowrap rounded-full border border-accent/60 px-3 py-1 text-xs font-medium text-accent-strong hover:bg-accent-soft"
+                >
+                  {user?.isGuest ? (
+                    <>
+                      Ruaj<span className="hidden min-[400px]:inline"> llogarinë</span>
+                    </>
+                  ) : (
+                    'Hyr'
+                  )}
                 </Link>
               )}
             </div>

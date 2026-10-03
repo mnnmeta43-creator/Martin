@@ -644,7 +644,13 @@ export function Calculator({
       ) : null}
 
       {!readOnly ? (
-        <div className="sticky bottom-20 z-10 flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-line bg-bg/95 p-3 backdrop-blur lg:bottom-4">
+        <div
+          className={cx(
+            'z-10 flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-line bg-bg/95 p-2 backdrop-blur sm:p-3',
+            // Only float over the content while there is something to save.
+            dirty || saving ? 'sticky bottom-20 lg:bottom-4' : '',
+          )}
+        >
           {status ? (
             <p role="status" className={cx('mr-auto text-sm', status.tone === 'ok' ? 'text-ok' : 'text-bad')}>
               {status.text}

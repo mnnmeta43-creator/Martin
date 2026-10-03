@@ -16,7 +16,7 @@ export function CountrySelectForm({
 }) {
   return (
     <form action={action} method="get" className="flex flex-wrap items-end gap-2">
-      <div className="min-w-0 flex-1 sm:flex-none">
+      <div className="w-full min-w-0 sm:w-auto sm:min-w-56">
         <label htmlFor={`sel-${paramName}`} className="mb-1 block text-xs text-muted">
           {label}
         </label>
@@ -24,7 +24,7 @@ export function CountrySelectForm({
           id={`sel-${paramName}`}
           name={paramName}
           defaultValue={value}
-          className="w-full min-w-48 rounded-xl border border-line-strong bg-surface-2 px-3 py-2.5 text-sm text-ink"
+          className="w-full rounded-xl border border-line-strong bg-surface-2 px-3 py-2.5 text-sm text-ink"
         >
           {countries.map((c) => (
             <option key={c.code} value={c.code}>

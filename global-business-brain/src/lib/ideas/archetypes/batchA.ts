@@ -3,6 +3,9 @@ import type { BusinessArchetype } from '@/lib/domain/types';
 /**
  * Batch A — shërbime me kapital të ulët, të përshtatshme për nisje individuale.
  * The first entry is the reference example for tone, depth and honesty; keep new entries at this level.
+ * Most entries start solo from home; turnover cleaning needs a partner, and photo/translation work can
+ * serve international clients online. All amounts are general USD assumptions at US price levels;
+ * every legal statement asks for local verification.
  */
 export const BATCH_A: BusinessArchetype[] = [
   {
@@ -257,6 +260,337 @@ export const BATCH_A: BusinessArchetype[] = [
       'Një person mund të shërbejë 15–30 klientë me procese të standardizuara.',
       'Bizneset lokale paguajnë rregullisht abonime të vogla mujore.',
       'Hostimi dhe mjetet mund të mbahen nën 10% të çmimit për klient.',
+      'Interesi verbal nuk është provë; vetëm pagesa e muajit të parë konfirmon kërkesën.',
+    ],
+    sourcesNoteSq:
+      'Çmimet dhe kostot janë supozime të përgjithshme të bibliotekës në USD, jo çmime të verifikuara për ndonjë vend. Treguesit makro vijnë nga burimet e regjistrit me datë dhe periudhë.',
+    assumptionsDate: '2026-10-02',
+  },
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 2. Bookkeeping & admin for micro-businesses — home, solo, low capital, B2B;
+  //    statements are drafted and signed by a licensed accountant, not by this service
+  // ───────────────────────────────────────────────────────────────────────────
+  {
+    id: 'kontabilitet-dhe-administrim-per-mikrobiznese',
+    nameSq: 'Mbajtje librash dhe administrim dokumentesh për mikrobiznese',
+    taglineSq: 'Faturat, shpenzimet dhe afatet e muajit në rregull — dosje e plotë për kontabilistin e licencuar.',
+    descriptionSq:
+      'Shërbim mujor për mikrobiznese me 1–10 persona (dyqane, servise, zanatçinj, profesionistë të lirë) që i mbajnë faturat në çanta, në telefon ose në email dhe humbasin orë çdo muaj duke i kërkuar. Shërbimi mbledh dhe rendit dokumentet, regjistron të ardhurat dhe shpenzimet, përgatit faturat dhe kujtesat e pagesave, ndjek afatet dhe i dorëzon kontabilistit të licencuar të klientit një dosje të plotë çdo muaj. Hartimi, nënshkrimi dhe dorëzimi i pasqyrave financiare dhe i deklaratave tatimore mbeten te kontabilisti i licencuar, aty ku ligji e kërkon.',
+    sector: 'sherbime_biznesi',
+    offerSq:
+      'Paketë mujore: mbledhje e dokumenteve një herë në javë (me foto, me email ose në një kuti fizike), regjistrim i të ardhurave dhe i shpenzimeve në një program kontabiliteti, përgatitje e faturave për klientët dhe kujtesa për pagesat e vonuara, kalendar i afateve tatimore dhe administrative, dosje mujore e rregulluar për kontabilistin e licencuar dhe një përmbledhje njëfaqëshe: sa hyri, sa doli dhe kush ju detyrohet.',
+    payingCustomerSq: 'Pronari i një mikrobiznesi ose profesionisti i lirë që e bën vetë administrimin dhe nuk ka staf zyre.',
+    customerSegments: ['b2b'],
+    problemSq:
+      'Pronarët e bizneseve të vogla i lënë dokumentet për fund të muajit, humbasin fatura, vonojnë faturimin e klientëve dhe rrezikojnë gjoba për afate të harruara; kontabilisti merr dokumente të paplota dhe faturon më shumë kohë, ndërsa pronari nuk e di sa fiton realisht.',
+    modes: ['kombinuar', 'online'],
+    marketScopes: ['lokal'],
+    canStartFromHome: true,
+    minTeam: 'vetem',
+    requiredSkills: ['kontabilitet', 'administrim'],
+    helpfulSkills: ['analize_te_dhenash', 'sherbim_klienti', 'shitje'],
+    helpfulAssets: ['kompjuter', 'internet_i_qendrueshem', 'telefon_smart', 'rrjet_kontaktesh'],
+    minHoursPerWeek: 15,
+    regulated: true,
+    regulationNotesSq: [
+      'Në shumë vende, hartimi, nënshkrimi dhe dorëzimi i pasqyrave financiare dhe i disa deklaratave tatimore lejohen vetëm për kontabilistë të licencuar ose të miratuar. Cilat detyra mund t’i kryejë një person pa licencë (regjistrime, faturim, rendje dokumentesh): Kërkon verifikim lokal para se ta ofroni shërbimin.',
+      'Mos e paraqitni veten si “kontabilist” ose “ekspert kontabël” nëse titulli mbrohet me ligj dhe nuk e keni licencën; verifikoni si mund ta emërtoni ligjërisht shërbimin tuaj.',
+      'Dokumentet e klientëve përmbajnë të dhëna personale dhe financiare: verifikoni rregullat lokale të mbrojtjes së të dhënave, nënshkruani marrëveshje me shkrim për përpunimin e tyre dhe ruajini me fjalëkalim dhe kopje rezervë.',
+      'Në disa vende, ofruesit e shërbimeve kontabël kanë detyrime për parandalimin e pastrimit të parave (identifikimi i klientit, raportimi i transaksioneve të dyshimta): Kërkon verifikim lokal.',
+      'Regjistrimi i aktivitetit, faturimi dhe sigurimi i përgjegjësisë profesionale: verifikoni kërkesat në regjistrin zyrtar të bizneseve dhe pranë administratës tatimore.',
+    ],
+    licensedProfessionalsSq: [
+      'Kontabilist i licencuar ose i miratuar për hartimin, nënshkrimin dhe dorëzimin e pasqyrave financiare dhe të deklaratave tatimore (ku ligji e kërkon)',
+      'Këshilltar tatimor i licencuar për pyetje tatimore që dalin jashtë regjistrimeve rutinë (aty ku ky profesion ekziston)',
+    ],
+    adultOnly: true,
+    zeroCapitalTestSq:
+      'Me kompjuterin tuaj dhe një program kontabiliteti me plan falas: ofroni 3 mikrobizneseve që njihni të rregulloni falas dokumentet e një muaji (fatura, shpenzime, pagesa të papaguara) dhe t’ua dorëzoni të renditura bashkë me përmbledhjen njëfaqëshe, në këmbim të një takimi 20-minutësh për rezultatin dhe të një kontakti me kontabilistin e tyre. Pastaj u bëni 15 bizneseve të tjera ofertë me çmim për muajin e ardhshëm. Kostoja reale: koha juaj, transporti dhe, para punës së rregullt me pagesë, regjistrimi i aktivitetit (kërkon verifikim lokal).',
+    revenueModelSq:
+      'Abonim mujor fiks për biznes (njësia = 1 abonim/muaj), me nivel çmimi sipas numrit të dokumenteve në muaj (p.sh. deri në 50 ose deri në 150). Rregullimi i dokumenteve të muajve të kaluar faturohet veçmas dhe nuk përfshihet në modelin bazë.',
+    pricing: {
+      unitLabelSq: 'abonim mujor',
+      priceUSD: { low: 70, base: 140, high: 280 },
+      variableCostUSD: { low: 3, base: 8, high: 18 },
+      unitsPerCustomerPerMonth: 1,
+      collectionDays: 30,
+      supplierPaymentDays: 0,
+      noteSq:
+        'Kostoja variabël përfshin licencën e programit të kontabilitetit ose të skanimit për çdo klient, hapësirën në re dhe printimet. Çmimi varet kryesisht nga numri i dokumenteve në muaj, jo nga madhësia e biznesit. Çmimet janë supozime fillestare në USD; verifikojini duke pyetur 10 mikrobiznese sa i paguajnë sot kontabilistit dhe sa orë humbasin vetë me dokumentet, dhe duke kërkuar ofertat e 3 zyrave kontabël.',
+    },
+    startupCosts: [
+      {
+        id: 'laptop',
+        labelSq: 'Laptop pune',
+        category: 'pajisje',
+        lowUSD: 400,
+        highUSD: 900,
+        noteSq: 'Nevojitet vetëm nëse nuk keni kompjuter; një laptop i përdorur në gjendje të mirë mjafton për programet e kontabilitetit.',
+        scalesWithPriceLevel: false,
+        optional: true,
+        avoidedByAssets: ['kompjuter'],
+      },
+      {
+        id: 'scanner',
+        labelSq: 'Skaner dokumentesh me ushqyes automatik dhe printer',
+        category: 'pajisje',
+        lowUSD: 120,
+        highUSD: 400,
+        noteSq:
+          'Kursen orë kur klientët sjellin dokumente letre; në fillim mjafton skanimi me telefon përmes një aplikacioni falas. Krahasoni 2–3 modele sipas shpejtësisë së skanimit.',
+        scalesWithPriceLevel: false,
+        optional: true,
+      },
+      {
+        id: 'training',
+        labelSq: 'Kurs praktik për programin e kontabilitetit dhe rregullat bazë të faturimit',
+        category: 'hapje',
+        lowUSD: 0,
+        highUSD: 300,
+        noteSq:
+          'Nëse keni përvojë, mund ta anashkaloni; përndryshe krahasoni kurset e shoqatave profesionale ose të qendrave të formimit dhe pyesni çfarë certifikate japin.',
+        scalesWithPriceLevel: true,
+        optional: true,
+      },
+      {
+        id: 'registration-fees',
+        labelSq: 'Regjistrim aktiviteti dhe faturim',
+        category: 'tarifa',
+        lowUSD: 0,
+        highUSD: 200,
+        noteSq: 'Tarifat ndryshojnë sipas vendit dhe formës ligjore; merrni shumën e saktë nga regjistri zyrtar i bizneseve.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'market-test',
+        labelSq: 'Test tregu: printime, transport dhe 3 klientë pilot',
+        category: 'testim_tregu',
+        lowUSD: 30,
+        highUSD: 150,
+        noteSq:
+          'Fletë me ofertën dhe një shembull të përmbledhjes mujore, transport për takime dhe licenca programi për 3 klientë pilot gjatë 2 muajve.',
+        scalesWithPriceLevel: true,
+      },
+    ],
+    monthlyFixedCosts: [
+      {
+        id: 'accounting-software',
+        labelSq: 'Program kontabiliteti, ruajtje në re dhe menaxher fjalëkalimesh',
+        category: 'software',
+        lowUSD: 20,
+        highUSD: 80,
+        noteSq: 'Shumë programe kanë plane falas ose të lira për pak klientë; kostoja rritet me numrin e bizneseve që menaxhoni.',
+        scalesWithPriceLevel: false,
+      },
+      {
+        id: 'professional-insurance',
+        labelSq: 'Sigurim i përgjegjësisë profesionale',
+        category: 'sigurime',
+        lowUSD: 10,
+        highUSD: 60,
+        noteSq:
+          'Mbulon dëmin që mund t’i shkaktojë klientit një gabim në regjistrime; pyesni 2–3 agjenci dhe verifikoni nëse kërkohet me ligj për shërbimin tuaj.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'phone-internet',
+        labelSq: 'Telefon dhe internet pune',
+        category: 'sherbime_komunale',
+        lowUSD: 10,
+        highUSD: 40,
+        noteSq: 'Pjesa e faturës që lidhet me punën; verifikoni paketat e operatorëve lokalë.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'local-transport',
+        labelSq: 'Transport për marrjen e dokumenteve dhe takime',
+        category: 'transport',
+        lowUSD: 10,
+        highUSD: 60,
+        noteSq: 'Varet nga sa klientë dërgojnë dokumentet në mënyrë digjitale; grupimi i klientëve në një zonë e ul këtë kosto.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'accountant-review',
+        labelSq: 'Rishikim periodik nga një kontabilist i licencuar',
+        category: 'kontabilitet',
+        lowUSD: 0,
+        highUSD: 120,
+        noteSq:
+          'Një kontabilist i licencuar që kontrollon me kampion punën tuaj çdo muaj ose tremujor ul gabimet dhe ju mëson rregullat lokale; negocioni tarifë fikse ose bashkëpunim me referime të ndërsjella.',
+        scalesWithPriceLevel: true,
+        optional: true,
+      },
+    ],
+    ramp: {
+      konservator: { startCustomers: 0, monthlyNewCustomers: 1, monthlyChurnPct: 4 },
+      baze: { startCustomers: 1, monthlyNewCustomers: 2, monthlyChurnPct: 3 },
+      optimist: { startCustomers: 2, monthlyNewCustomers: 3, monthlyChurnPct: 2 },
+    },
+    seasonality: [1.1, 1.05, 1.05, 1, 0.95, 0.95, 0.95, 0.9, 1, 1, 1, 1.05],
+    seasonalityNoteSq:
+      'Abonimet janë të qëndrueshme gjatë vitit. Hipotezë: kërkesa e re dhe puna shtesë rriten në fillim të vitit dhe para afateve vjetore të deklarimit, ndërsa vera është më e qetë. Afatet ndryshojnë sipas vendit; verifikojini dhe përshtatni kurbën.',
+    macroLinks: [
+      {
+        indicatorCode: 'new_business_density',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Sa më shumë biznese të reja regjistrohen në raport me popullsinë në moshë pune, aq më shumë pronarë përballen për herë të parë me fatura, afate dhe dokumente pa pasur staf administrativ.',
+        ifSupportsSq:
+          'Dendësia e lartë e bizneseve të reja sugjeron një rrjedhë të vazhdueshme klientësh të mundshëm që kanë nevojë për rregull në dokumente.',
+        ifContradictsSq:
+          'Me pak biznese të reja, tregu varet nga bizneset ekzistuese që shpesh kanë tashmë kontabilist; specializohuni në një nish (p.sh. profesionistë të lirë) dhe testoni me kujdes.',
+      },
+      {
+        indicatorCode: 'private_credit_gdp',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Kur kredia për sektorin privat është më e përhapur, më shumë mikrobiznese aplikojnë për kredi ose qira financiare, dhe bankat kërkojnë regjistrime të rregullta dhe pasqyra të besueshme.',
+        ifSupportsSq:
+          'Kredia e përhapur e rrit vlerën e dokumenteve të rregullta: pronari paguan edhe për të qenë gati kur i duhet financim.',
+        ifContradictsSq:
+          'Me kredi të pakët, argumenti “gati për bankën” është i dobët; mbështetuni te kursimi i kohës dhe shmangia e gjobave.',
+      },
+      {
+        indicatorCode: 'services_va_gdp',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Ekonomitë ku shërbimet zënë peshë të madhe kanë zakonisht shumë biznese të vogla shërbimi (servise, profesionistë, tregti e vogël) me shumë fatura të vogla dhe pa staf zyre.',
+        ifSupportsSq:
+          'Pesha e lartë e shërbimeve sugjeron më shumë klientë të mundshëm me nevojë për administrim të rregullt (duhet konfirmuar lokalisht).',
+        ifContradictsSq:
+          'Me peshë të ulët të shërbimeve, bizneset e vogla mund të jenë më të pakta ose më të shpërndara; numëroni klientët e mundshëm në zonë para se të investoni kohë.',
+      },
+    ],
+    whyItCouldWork: {
+      changeSq:
+        'Gjithnjë e më shumë fatura, pagesa dhe njoftime zyrtare kalojnë në formë elektronike, ndërsa mikrobizneset vazhdojnë të mos kenë staf administrativ.',
+      problemSq:
+        'Dokumentet e çrregullta u kushtojnë pronarëve orë pune, fatura të paarkëtuara, tarifa më të larta te kontabilisti dhe rrezik gjobash për afate të humbura.',
+      customerSq: 'Pronarë mikrobiznesesh dhe profesionistë të lirë që e bëjnë vetë administrimin në mbrëmje ose në fundjavë.',
+      offerSq: 'Një person i besuar që i mban dokumentet në rregull çdo muaj dhe i dorëzon kontabilistit të licencuar një dosje të plotë.',
+      reasonToPaySq:
+        'Kohë e kursyer, më pak para të harruara te klientët dhe qetësi për afatet; mundësisht edhe më pak orë të faturuara nga kontabilisti, sepse merr dokumente të plota.',
+      profitConditionsSq:
+        'Fitimi kërkon 15–25 klientë me procese standarde (dokumentet vijnë në të njëjtën mënyrë çdo javë), çmim sipas vëllimit të dokumenteve dhe pagesa të rregullta brenda 30 ditëve.',
+    },
+    failureModes: [
+      {
+        kind: 'kerkese_e_pamjaftueshme',
+        textSq: 'Pronarët e pranojnë rrëmujën, por e shohin si punë që e bëjnë “falas” vetë dhe nuk paguajnë çdo muaj.',
+      },
+      {
+        kind: 'cmim',
+        textSq: 'Klientët e krahasojnë çmimin me tarifën e ulët të kontabilistit ekzistues, edhe pse ai nuk bën administrimin e përditshëm.',
+      },
+      {
+        kind: 'konkurrence',
+        textSq: 'Zyrat kontabël ofrojnë paketa të plota, ndërsa programet e faturimit premtojnë automatizim pa ndihmë njerëzore.',
+      },
+      {
+        kind: 'kosto',
+        textSq: 'Disa klientë sjellin dokumente shumë të çrregullta dhe kërkojnë dyfishin e orëve të planifikuara.',
+      },
+      {
+        kind: 'vonesa_pagesash',
+        textSq: 'Mikrobizneset me para të pakta vonojnë pikërisht pagesën e shërbimeve administrative.',
+      },
+      {
+        kind: 'ligjore',
+        textSq:
+          'Kalimi pa dashje në punë që lejohet vetëm për kontabilistë të licencuar, ose një gabim që i shkakton klientit gjobë, sjell përgjegjësi ligjore dhe humbje besimi.',
+      },
+      {
+        kind: 'aftesi',
+        textSq: 'Pa njohje të mirë të rregullave të faturimit dhe të programit, gabimet e vogla përsëriten çdo muaj.',
+      },
+    ],
+    falsifiersSq: [
+      'Nga 20 mikrobiznese të intervistuara, më pak se 6 kanë humbur fatura, kanë paguar gjobë ose kanë vonuar faturimin gjatë vitit të fundit.',
+      'Pas 20 ofertave me çmim konkret, më pak se 2 biznese paguajnë muajin e parë.',
+      'Pas 3 muajsh me klientë pilot, puna mesatare për klient kalon 8 orë në muaj me çmimin bazë, pra çmimi nuk e mbulon kohën.',
+      'Kontabilistët e licencuar në zonë refuzojnë të punojnë me dosje të përgatitura nga të tjerët ose e ofrojnë vetë administrimin me çmim më të ulët.',
+    ],
+    differentiationSq: [
+      'Dorëzim i dokumenteve me një rutinë të thjeshtë javore (foto ose kuti fizike), pa pritur fundin e muajit.',
+      'Përmbledhje njëfaqëshe çdo muaj në gjuhë të thjeshtë: sa hyri, sa doli, kush ju detyrohet dhe cili afat po vjen.',
+      'Bashkëpunim i qartë me kontabilistin e licencuar të klientit, jo konkurrencë me të.',
+      'Specializim në një lloj biznesi (p.sh. vetëm servise ose profesionistë të lirë) me lista kontrolli të gatshme.',
+    ],
+    competitorTypesSq: [
+      'Zyra kontabël që ofrojnë paketa të plota me kontabilist të licencuar',
+      'Programe faturimi dhe kontabiliteti “bëje vetë”',
+      'Të afërm ose punonjës që e bëjnë administrimin herë pas here',
+      'Kontabilistë të pavarur që marrin dokumentet vetëm në fund të muajit',
+    ],
+    cheapestTestSq:
+      'Rregullim falas i dokumenteve të një muaji për 3 mikrobiznese, i ndjekur nga 20 oferta me çmim konkret për muajin e ardhshëm. Masni sa paguajnë dhe sa orë kërkon realisht çdo klient, jo sa thonë se “kanë nevojë”.',
+    interviewQuestionsSq: [
+      'Si i mblidhni sot faturat dhe shpenzimet gjatë muajit?',
+      'Kur ishte hera e fundit që nuk e gjetët një faturë ose një dokument kur ju duhej?',
+      'Sa orë ju mori muajin e kaluar puna me dokumentet, faturat dhe pagesat?',
+      'Sa i paguani sot kontabilistit dhe çfarë përfshin saktësisht ajo pagesë?',
+      'Keni paguar ndonjëherë gjobë ose kamatë për një afat të humbur? Çfarë ndodhi?',
+      'Sa para ju detyrojnë klientët tani dhe si i ndiqni pagesat e vonuara?',
+      'Çfarë keni provuar më parë për t’i mbajtur dokumentet në rregull dhe pse e latë?',
+    ],
+    firstCustomers: {
+      whereSq: [
+        'Mikrobiznese ku jeni vetë klient ose që i njihni personalisht (servise, dyqane, zanatçinj)',
+        'Profesionistë të lirë që sapo kanë hapur aktivitetin',
+        'Kontabilistë të licencuar që kanë shumë klientë të vegjël me dokumente të çrregullta (bashkëpunim për referime)',
+        'Shoqatat lokale të biznesit dhe takimet e hapura të dhomave të tregtisë',
+      ],
+      howToContactSq: [
+        'Vizitë personale në orë të qeta, me një shembull të përmbledhjes mujore dhe ofertën me shkrim',
+        'Takime me 5 kontabilistë të licencuar për t’u ofruar dosje të rregullta për klientët e tyre të vegjël',
+        'Rekomandime nga klientët pilot, pa lista të blera dhe pa mesazhe masive',
+      ],
+      offerSq: 'Rregullim falas i dokumenteve të një muaji, pastaj abonim mujor pa detyrim afatgjatë (anulim me njoftim 30-ditor).',
+      followUpSq:
+        'Regjistroni çdo kontakt në një tabelë (data, përgjigjja, hapi i radhës); një rikujtesë e vetme pas 7 ditësh, pastaj ndaloni nëse nuk ka interes.',
+      metricsSq: [
+        'Kontakte → takime (%)',
+        'Takime → abonime me pagesë (%)',
+        'Orë pune për klient në muaj',
+        'Fatura të paguara brenda 30 ditëve (%)',
+        'Klientë që anulojnë në 3 muajt e parë',
+      ],
+    },
+    pitchTemplateSq:
+      'Përshëndetje, jam [emri]. Ndihmoj biznese si [emri i biznesit] t’i mbajnë faturat, shpenzimet dhe pagesat në rregull gjatë gjithë muajit, që kontabilisti juaj të marrë një dosje të plotë dhe ju të dini kush ju detyrohet. Nuk e zëvendësoj kontabilistin tuaj; bëj punën e përditshme që sot ju merr [numri] orë në muaj. Mund t’jua rregulloj falas dokumentet e një muaji, që ta shihni vetë rezultatin.',
+    offerTemplateSq:
+      'Oferta për [emri i biznesit]: (1) mbledhje e dokumenteve çdo [dita e javës], me foto ose në kuti; (2) regjistrim i të ardhurave dhe i shpenzimeve deri në [numri] dokumente në muaj; (3) përgatitje e faturave dhe kujtesa për pagesat e vonuara; (4) dosje mujore për kontabilistin tuaj të licencuar deri më [data]; (5) përmbledhje njëfaqëshe mujore. Çmimi: [çmimi] në muaj, pagesë brenda 30 ditëve nga fatura. Anulim me njoftim 30-ditor. Pasqyrat financiare dhe deklaratat i harton dhe i nënshkruan kontabilisti i licencuar; ne nuk premtojmë ulje taksash, por dokumente të plota dhe në kohë.',
+    feedbackQuestionsSq: [
+      'Sa orë ju kursyen gjatë muajit të fundit, sipas vlerësimit tuaj?',
+      'Çfarë ju tha kontabilisti për dosjen që i dorëzuam?',
+      'Cila pjesë e shërbimit ju duket më pak e dobishme?',
+      'A ka pasur ndonjë dokument që humbi ose u vonua? Si ndodhi?',
+    ],
+    goCriteriaSq: [
+      'Të paktën 3 biznese paguajnë muajin e parë me çmim të plotë pas 20 ofertave konkrete.',
+      'Koha mesatare për klient mbetet nën 6 orë në muaj pas muajit të dytë.',
+      'Të paktën 1 kontabilist i licencuar pranon bashkëpunimin dhe referon një klient brenda 3 muajve.',
+    ],
+    killCriteriaSq: [
+      'Pas 40 kontakteve dhe 20 ofertave, më pak se 2 klientë me pagesë.',
+      'Më shumë se gjysma e klientëve pilot anulojnë brenda 2 muajve.',
+      'Verifikimi ligjor tregon se detyrat kryesore të paketës lejohen vetëm për kontabilistë të licencuar dhe nuk keni rrugë realiste për licencë ose partneritet.',
+    ],
+    phaseNotesSq: {
+      p10_20: ['Intervistoni 20 pronarë mikrobiznesesh dhe 3 kontabilistë të licencuar për mënyrën si qarkullojnë dokumentet sot.'],
+      p20_30: ['Kërkoni oferta reale nga 3 zyra kontabël për një mikrobiznes tipik dhe shënoni çfarë përfshijnë dhe çfarë jo.'],
+      p40_50: [
+        'Verifikoni me shkrim cilat detyra lejohen pa licencë kontabël, si emërtohet ligjërisht shërbimi dhe nëse keni detyrime për parandalimin e pastrimit të parave.',
+      ],
+      p50_60: ['Ndërtoni një listë kontrolli mujore dhe një strukturë dosjesh të njëjtë për çdo klient, me kopje rezervë të enkriptuar.'],
+      p60_70: ['Pilot me 3 biznese për 2 muaj; matni orët për klient dhe dokumentet që mungojnë çdo muaj.'],
+    },
+    assumptionsSq: [
+      'Një person mund të shërbejë 15–25 mikrobiznese me procese të standardizuara.',
+      'Kontabilistët e licencuar e pranojnë punën përgatitore të një personi tjetër kur dosja është e rregullt.',
+      'Detyrat e paketës (regjistrime, faturim, rendje dokumentesh) lejohen pa licencë në vendin tuaj — duhet verifikuar.',
       'Interesi verbal nuk është provë; vetëm pagesa e muajit të parë konfirmon kërkesën.',
     ],
     sourcesNoteSq:
