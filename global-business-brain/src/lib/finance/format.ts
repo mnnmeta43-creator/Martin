@@ -6,7 +6,7 @@
  */
 import type { CurrencyCode, IndicatorDefinition } from '@/lib/domain/types';
 import { currencyMinorUnits } from '@/lib/finance/currency';
-import { formatDatePartsSq, formatIsoDateSq, hasImpossibleDatePrefix, MISSING_SQ, MONTHS_SQ, numberFormat } from '@/lib/finance/locale';
+import { formatDatePartsSq, formatIsoDateSq, hasImpossibleDatePrefix, MISSING_SQ, MONTHS_SQ, numberFormat, type SqNumberFormatOptions } from '@/lib/finance/locale';
 
 export interface FormatMoneyOptions {
   decimals?: number; // default: the currency's minor units (EUR 2, JPY 0)
@@ -32,7 +32,7 @@ function clampDecimals(decimals: number): number {
 /** Plain number; without `decimals` it shows up to 2 decimals and drops trailing zeros. */
 export function formatNumber(value: number | null | undefined, decimals?: number): string {
   if (!isNumber(value)) return MISSING_SQ;
-  const options: Intl.NumberFormatOptions =
+  const options: SqNumberFormatOptions =
     decimals === undefined
       ? { maximumFractionDigits: 2 }
       : { minimumFractionDigits: clampDecimals(decimals), maximumFractionDigits: clampDecimals(decimals) };
@@ -48,7 +48,7 @@ export function formatMoney(value: number | null | undefined, currency: Currency
   if (!isNumber(value)) return MISSING_SQ;
   const decimals = opts.decimals === undefined ? undefined : clampDecimals(opts.decimals);
   try {
-    const options: Intl.NumberFormatOptions = opts.compact
+    const options: SqNumberFormatOptions = opts.compact
       ? { style: 'currency', currency, notation: 'compact', maximumFractionDigits: decimals ?? 1 }
       : decimals === undefined
         ? { style: 'currency', currency }

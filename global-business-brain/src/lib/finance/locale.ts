@@ -26,18 +26,113 @@ export const MONTHS_SQ: readonly string[] = [
 /** Placeholder shown for missing / non-numeric values (never "0"). */
 export const MISSING_SQ = '—';
 
-const formatterCache = new Map<string, Intl.NumberFormat>();
+export interface SqNumberFormatOptions {
+  minimumFractionDigits?: number;
+  maximumFractionDigits?: number;
+  maximumSignificantDigits?: number;
+  notation?: 'standard' | 'compact';
+  style?: 'decimal' | 'currency';
+  currency?: string;
+}
 
-/** Cached sq-AL number formatter; Intl construction is comparatively expensive. */
-export function numberFormat(options: Intl.NumberFormatOptions): Intl.NumberFormat {
-  const key = JSON.stringify(options);
-  let formatter = formatterCache.get(key);
-  if (!formatter) {
-    // signDisplay 'negative' avoids rendering "-0" for tiny negative values rounded to zero.
-    formatter = new Intl.NumberFormat(LOCALE, { signDisplay: 'negative', ...options });
-    formatterCache.set(key, formatter);
+export interface SqNumberFormatter {
+  format(value: number): string;
+}
+
+const NBSP = '\u00a0';
+
+/**
+ * Albanian currency symbols as CLDR renders them in sq-AL (others show their ISO code).
+ * Kept static so server and browser render the same text.
+ */
+const CURRENCY_SYMBOLS_SQ: Record<string, string> = { EUR: '€', USD: 'US$', GBP: '£', JPY: 'JP¥', ALL: 'Lekë' };
+
+/** ISO 4217 / CLDR display digits that differ from 2 (CLDR shows ALL without decimals). */
+const ZERO_DECIMAL_CURRENCIES = new Set(['ALL', 'JPY', 'KRW', 'ISK', 'CLP', 'VND', 'UGX', 'PYG', 'RSD', 'HUF', 'XAF', 'XOF', 'IDR', 'IQD', 'LAK', 'MMK', 'SOS', 'TZS']);
+const THREE_DECIMAL_CURRENCIES = new Set(['BHD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND']);
+
+export function currencyDisplayDigits(code: string): number {
+  const c = code.toUpperCase();
+  if (ZERO_DECIMAL_CURRENCIES.has(c)) return 0;
+  if (THREE_DECIMAL_CURRENCIES.has(c)) return 3;
+  return 2;
+}
+
+export function currencySymbolSq(code: string): string {
+  const c = code.toUpperCase();
+  return CURRENCY_SYMBOLS_SQ[c] ?? c;
+}
+
+/** "1234567,891" with sq-AL rules: decimal comma, NBSP groups only from 5 integer digits up. */
+function plainDigits(abs: number, minFrac: number, maxFrac: number): string {
+  let fixed = abs.toFixed(maxFrac);
+  if (maxFrac > minFrac && fixed.includes('.')) {
+    fixed = fixed.replace(/0+$/, '');
+    const decimals = fixed.split('.')[1] ?? '';
+    if (decimals.length < minFrac) fixed = fixed.split('.')[0] + '.' + decimals.padEnd(minFrac, '0');
+    fixed = fixed.replace(/\.$/, '');
   }
-  return formatter;
+  const [intPart, fracPart] = fixed.split('.');
+  const grouped = intPart.length >= 5 ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP) : intPart;
+  return fracPart ? `${grouped},${fracPart}` : grouped;
+}
+
+function significantMaxFrac(abs: number, sig: number): number {
+  if (abs === 0) return 0;
+  const intDigits = Math.max(1, Math.floor(Math.log10(abs)) + 1);
+  return Math.max(0, sig - intDigits);
+}
+
+const COMPACT_STEPS: [number, string][] = [
+  [1e12, 'bln'],
+  [1e9, 'mld'],
+  [1e6, 'mln'],
+  [1e3, 'mijë'],
+];
+
+/**
+ * Deterministic sq-AL number formatter (a small subset of Intl.NumberFormat).
+ * Browsers ship reduced ICU data and many lack Albanian, so relying on Intl made the server
+ * render "1 234,50 €" and the browser "€1,234.50" — a hydration mismatch and wrong separators.
+ */
+export function numberFormat(options: SqNumberFormatOptions): SqNumberFormatter {
+  return {
+    format(value: number): string {
+      if (!Number.isFinite(value)) return MISSING_SQ;
+      const currency = options.style === 'currency' && options.currency ? options.currency.toUpperCase() : null;
+      const currencyDigits = currency ? currencyDisplayDigits(currency) : 0;
+      let abs = Math.abs(value);
+      let unit = '';
+      if (options.notation === 'compact') {
+        const step = COMPACT_STEPS.find(([size]) => abs >= size);
+        if (step) {
+          abs = abs / step[0];
+          unit = step[1];
+        }
+      }
+      let maxFrac: number;
+      let minFrac: number;
+      if (options.maximumSignificantDigits !== undefined) {
+        maxFrac = significantMaxFrac(abs, options.maximumSignificantDigits);
+        minFrac = 0;
+      } else if (options.notation === 'compact') {
+        maxFrac = options.maximumFractionDigits ?? (unit ? 1 : 0);
+        minFrac = Math.min(maxFrac, options.minimumFractionDigits ?? 0);
+      } else {
+        const defaultMax = currency ? currencyDigits : 3;
+        const defaultMin = currency ? currencyDigits : 0;
+        maxFrac = options.maximumFractionDigits ?? Math.max(defaultMax, options.minimumFractionDigits ?? 0);
+        minFrac = Math.min(maxFrac, options.minimumFractionDigits ?? defaultMin);
+      }
+      maxFrac = Math.min(20, Math.max(0, maxFrac));
+      minFrac = Math.min(maxFrac, Math.max(0, minFrac));
+      const digits = plainDigits(abs, minFrac, maxFrac);
+      const isZero = /^[0,\u00a0]+$/.test(digits);
+      const sign = value < 0 && !isZero ? '-' : '';
+      const withUnit = unit ? `${digits}${NBSP}${unit}` : digits;
+      return currency ? `${sign}${withUnit}${NBSP}${currencySymbolSq(currency)}` : `${sign}${withUnit}`;
+    },
+  };
 }
 
 export interface DateParts {

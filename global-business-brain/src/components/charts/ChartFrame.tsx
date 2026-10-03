@@ -20,7 +20,7 @@ export function ChartFrame({
 }) {
   const [asTable, setAsTable] = useState(false);
   return (
-    <figure className="rounded-2xl border border-line bg-surface p-3 sm:p-4">
+    <figure className="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface p-3 sm:p-4">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <figcaption className="min-w-0">
           <p className="font-semibold text-ink">{title}</p>

@@ -13,7 +13,7 @@ async function expectNoHorizontalScroll(page: Page) {
 async function fillProfile(page: Page) {
   await page.goto('/profili');
   await expect(page.getByRole('heading', { name: 'Profili im', level: 1 })).toBeVisible();
-  await page.getByLabel('Vendbanimi').selectOption('ZZA');
+  await page.getByLabel('Vendbanimi', { exact: true }).selectOption('ZZA');
   // In demo mode the default target market is the demo economy ZZA.
   await expect(page.getByRole('button', { name: /^Hiq .*Demolandë A/ }).first()).toBeVisible();
   await page.getByLabel('Kapitali në dispozicion').fill('4000');
@@ -85,12 +85,20 @@ test.describe('rrjedha e plotë', () => {
     // Exports respond with real files.
     const projectUrl = page.url().replace(/\/detyrat$/, '');
     const id = projectUrl.split('/').pop();
-    const pdf = await page.request.get(`/api/projects/${id}/export/pdf`);
-    expect(pdf.status()).toBe(200);
-    expect(pdf.headers()['content-type']).toContain('application/pdf');
-    const xlsx = await page.request.get(`/api/projects/${id}/export/xlsx`);
-    expect(xlsx.status()).toBe(200);
-    expect(xlsx.headers()['content-type']).toContain('spreadsheetml');
+    // Fetch from inside the page so the browser's own (Secure, HttpOnly) session cookie is sent.
+    const probe = (path: string) =>
+      page.evaluate(async (p) => {
+        const r = await fetch(p);
+        return { status: r.status, type: r.headers.get('content-type') ?? '', size: (await r.arrayBuffer()).byteLength };
+      }, path);
+    const pdf = await probe(`/api/projects/${id}/export/pdf`);
+    expect(pdf.status).toBe(200);
+    expect(pdf.type).toContain('application/pdf');
+    expect(pdf.size).toBeGreaterThan(5000);
+    const xlsx = await probe(`/api/projects/${id}/export/xlsx`);
+    expect(xlsx.status).toBe(200);
+    expect(xlsx.type).toContain('spreadsheetml');
+    expect(xlsx.size).toBeGreaterThan(5000);
   });
 
   test('izolimi: një vizitor tjetër nuk sheh projektin', async ({ page, browser }) => {
@@ -106,6 +114,8 @@ test.describe('rrjedha e plotë', () => {
     const otherPage = await other.newPage();
     const res = await otherPage.goto(url);
     expect(res?.status()).toBe(404);
+    await expect(otherPage.getByRole('heading', { name: 'Faqja nuk u gjet' })).toBeVisible();
+    await expect(otherPage.getByText(/Kapitali i nevojshëm/)).toHaveCount(0);
     const api = await otherPage.request.get(`/api/projects/${id}`);
     expect([401, 404]).toContain(api.status());
     await other.close();

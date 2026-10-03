@@ -26,6 +26,7 @@ import type {
 } from '@/lib/domain/types';
 import { MONTHLY_CATEGORY_LABELS, PHASE_TITLES, STARTUP_CATEGORY_LABELS } from '@/lib/domain/taxonomy';
 import { getIndicator } from '@/lib/data/indicators';
+import { sanitizeFinancialInputs } from '@/lib/finance/engine';
 import { formatNumber } from '@/lib/finance/format';
 import { MONTHS_SQ } from '@/lib/finance/locale';
 
@@ -69,6 +70,25 @@ export const COST_SOURCE_LABELS_SQ: Record<CostSourceKind, string> = {
 
 export function isDemoProject(input: ExportInput): boolean {
   return input.project.dataSnapshot.isDemo === true;
+}
+
+/**
+ * The inputs exactly as the engine used them (negative / NaN amounts clamped, horizon rounded…),
+ * so every number shown next to an engine result is the one that produced it. The engine's own
+ * warnings (listed in the exports) explain any correction.
+ */
+export function engineInputs(input: ExportInput): FinancialInputs {
+  return sanitizeFinancialInputs(input.project.financialInputs).inputs;
+}
+
+/** Current task list; falls back to the plan's defaults when no statuses are stored yet. */
+export function exportTasks(input: ExportInput): PlanTask[] {
+  return input.tasks.length > 0 ? input.tasks : input.plan.tasks;
+}
+
+/** Sum of the phase budgets (the plan splits the enabled startup investment across phases). */
+export function phaseBudgetTotal(plan: Plan): number {
+  return plan.phases.reduce((sum, phase) => (Number.isFinite(phase.budget.amount) ? sum + phase.budget.amount : sum), 0);
 }
 
 export function ownerSalaryStatementSq(inputs: FinancialInputs, money: (value: number) => string): string {

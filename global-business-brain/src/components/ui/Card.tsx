@@ -12,7 +12,7 @@ export function Card({
   id?: string;
 }) {
   return (
-    <Tag id={id} className={cx('rounded-2xl border border-line bg-surface p-4 sm:p-5', className)}>
+    <Tag id={id} className={cx('min-w-0 rounded-2xl border border-line bg-surface p-4 sm:p-5', className)}>
       {children}
     </Tag>
   );

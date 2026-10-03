@@ -27,7 +27,11 @@ import type { AssistantCalculation } from '@/lib/ai/handlers/shared';
 
 /** Default model (per the claude-api skill): Claude Opus 5.5. ANTHROPIC_MODEL overrides it. */
 export const DEFAULT_MODEL = 'claude-opus-5-5';
-export const MAX_TOKENS = 2000;
+/**
+ * Thinking is always on for Claude Opus 5.5 and counts toward max_tokens, so the cap leaves room
+ * for it on top of a short phone-screen answer (~1500 tokens at most; the prompt asks for fewer).
+ */
+export const MAX_TOKENS = 4000;
 export const MAX_TOOL_ITERATIONS = 6;
 export const REQUEST_TIMEOUT_MS = 45_000;
 export const TOTAL_BUDGET_MS = 100_000;
@@ -169,6 +173,8 @@ export async function runClaudeLoop(input: ClaudeRunInput): Promise<ClaudeRunRes
     }
     const toolUses = response.content.filter((b): b is BetaToolUseBlock => b.type === 'tool_use');
     if (response.stop_reason !== 'tool_use' || toolUses.length === 0) return result('ok', textOf(response.content));
+    // No request follows the last one, so its tool calls would run for nothing.
+    if (isLast) break;
 
     conversation.push({ role: 'assistant', content: echoableContent(response.content) });
     const results: BetaToolResultBlockParam[] = [];

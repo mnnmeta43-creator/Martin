@@ -7,7 +7,7 @@
  * annual average, demo, triangulated) travels with the result as an Albanian warning.
  */
 import type { CurrencyCode, FinancialInputs, FxConversion, FxRate, MoneyLine } from '@/lib/domain/types';
-import { formatIsoDateSq, LOCALE, numberFormat } from '@/lib/finance/locale';
+import { currencyDisplayDigits, formatIsoDateSq, numberFormat } from '@/lib/finance/locale';
 
 export interface ConvertOptions {
   /** Reference "today" for staleness checks; without it no staleness warning is produced. */
@@ -167,13 +167,9 @@ export function convert(
   };
 }
 
-/** Number of decimals customary for a currency (JPY 0, EUR 2); 2 for codes Intl rejects. */
+/** Number of decimals customary for a currency (JPY 0, EUR 2, CLDR display digits); static so every runtime agrees. */
 export function currencyMinorUnits(code: CurrencyCode): number {
-  try {
-    return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: code }).resolvedOptions().maximumFractionDigits ?? 2;
-  } catch {
-    return 2;
-  }
+  return currencyDisplayDigits(code);
 }
 
 /**

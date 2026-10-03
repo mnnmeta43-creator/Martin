@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   icons: { apple: '/icons/apple-touch-icon.png' },
 };
 
+// Every page depends on the session cookie; nothing is prerendered at build time (no DB access during build).
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   themeColor: '#05070d',
   width: 'device-width',

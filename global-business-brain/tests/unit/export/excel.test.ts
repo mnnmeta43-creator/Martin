@@ -14,6 +14,7 @@ import {
   type ExportInput,
 } from '@/lib/export/excel';
 import { DEMO_BANNER_SQ, EXPORT_CREATOR } from '@/lib/export/common';
+import { formatDateTime } from '@/lib/finance/format';
 import { GENERATED_AT, makeExportInput } from './fixtures';
 import { FormulaEvaluator } from './formulaEval';
 
@@ -229,6 +230,75 @@ describe('buildFinancialWorkbook', () => {
     expect(texts.some((t) => t.includes('nuk janë çmime të verifikuara'))).toBe(true);
   });
 
+  it('gives each citation row its source, indicator, country, period, value, URL, retrieval date and demo flag', () => {
+    const ws = sheet(wb, SHEET_NAMES.sources);
+    const header = (ws.getRow(4).values as unknown[]).slice(1);
+    for (const label of ['Burimi', 'Treguesi', 'Vendi', 'Periudha', 'Vlera', 'URL', 'Marrë më', 'Fiktive (demo)']) {
+      expect(header).toContain(label);
+    }
+    const column = (label: string) => header.indexOf(label) + 1;
+    input.citations.forEach((c, i) => {
+      const row = ws.getRow(5 + i);
+      expect(row.getCell(column('Burimi')).value).toBe(c.sourceName);
+      expect(row.getCell(column('Vendi')).value).toBe(c.countryCode);
+      expect(row.getCell(column('Periudha')).value).toBe(c.period);
+      expect(row.getCell(column('Vlera')).value).toBe(c.value);
+      const link = row.getCell(column('URL')).value as { text: string; hyperlink: string };
+      expect(link).toMatchObject({ text: c.url, hyperlink: c.url });
+      expect(row.getCell(column('Marrë më')).value).toBe(formatDateTime(c.retrievedAt));
+      expect(row.getCell(column('Fiktive (demo)')).value).toBe('Jo');
+    });
+  });
+
+  it('Supozimet lists every input the engine used, the seasonality row, the scenario table and the formulas', () => {
+    const ws = sheet(wb, SHEET_NAMES.assumptions);
+    const inputs = input.project.financialInputs;
+    const valueOf = (label: string) => {
+      const labels = ws.getColumn(1).values as unknown[];
+      const row = labels.indexOf(label);
+      expect(row, label).toBeGreaterThan(0);
+      return ws.getCell(row, 2).value;
+    };
+    expect(valueOf('Çmimi për njësi')).toBe(inputs.pricePerUnit);
+    expect(valueOf('Kostoja variabël për njësi')).toBe(inputs.variableCostPerUnit);
+    expect(valueOf('Njësi për klient në muaj')).toBe(inputs.unitsPerCustomerPerMonth);
+    expect(valueOf('Ditët e arkëtimit nga klientët')).toBe(inputs.collectionDays);
+    expect(valueOf('Ditët e pagesës te furnitorët')).toBe(inputs.supplierPaymentDays);
+    expect(valueOf('Muajt e rezervës')).toBe(inputs.reserveMonths);
+    expect(valueOf('Tatimi mbi fitimin (%)')).toBe(15);
+    expect(valueOf('Muaji i nisjes')).toBe(inputs.startMonth);
+    expect(valueOf('Kapitali vetjak')).toBe(inputs.ownCapital);
+    expect(valueOf('Paga e pronarit përfshihet')).toBe('Po');
+    expect(valueOf('Koeficientët e futur')).toBe(inputs.seasonality[0]);
+    for (const label of ['Klientët fillestarë', 'Klientë të rinj në muaj', 'Shumëzuesi i çmimit', 'Ditët e arkëtimit të përdorura']) {
+      expect(valueOf(label)).toBeTypeOf('number');
+    }
+    const texts = allText(wb);
+    for (const note of inputs.assumptionsNotesSq) expect(texts).toContain(`• ${note}`);
+    for (const formula of input.projections.baze.formulasSq) expect(texts).toContain(`• ${formula}`);
+  });
+
+  it('Plani totals the phase budgets with a SUM formula equal to the enabled startup investment', () => {
+    const ws = sheet(wb, SHEET_NAMES.plan);
+    const labels = ws.getColumn(2).values as unknown[];
+    const row = labels.indexOf('Buxheti i fazave gjithsej');
+    expect(row).toBeGreaterThan(0);
+    const cell = ws.getCell(row, 5);
+    expect(formulaOf(cell).formula).toMatch(/^SUM\(E6:E\d+\)$/);
+    expect(resultOf(cell)).toBeCloseTo(input.projections.baze.capital.startupTotal, 2);
+  });
+
+  it('every sheet has a frozen header, bold header cells and explicit column widths', () => {
+    wb.eachSheet((ws) => {
+      expect(ws.views[0]?.state, ws.name).toBe('frozen');
+      expect(ws.getCell('A1').font?.bold, ws.name).toBe(true);
+      expect(ws.getColumn(1).width, ws.name).toBeGreaterThan(8);
+    });
+    for (const name of [SHEET_NAMES.startup, SHEET_NAMES.monthly, SHEET_NAMES.sources]) {
+      expect(sheet(wb, name).getRow(4).getCell(1).font?.bold, name).toBe(true);
+    }
+  });
+
   it('writes the plan phases and task statuses in Albanian', () => {
     const texts = allText(wb);
     for (const phase of input.plan.phases) expect(texts).toContain(phase.titleSq);
@@ -270,12 +340,40 @@ describe('buildFinancialWorkbook', () => {
 });
 
 describe('buildFinancialWorkbook — variants', () => {
-  it('shows the DEMO marker for demo projects', async () => {
-    const wb = await load(await buildFinancialWorkbook(makeExportInput({ demo: true })));
+  it('shows the DEMO marker for demo projects, on the summary and on every sheet title', async () => {
+    const input = makeExportInput({ demo: true });
+    const wb = await load(await buildFinancialWorkbook(input));
     const summary = sheet(wb, SHEET_NAMES.summary);
     expect(String(summary.getCell('A2').value)).toContain(DEMO_BANNER_SQ);
+    wb.eachSheet((ws) => expect(String(ws.getCell('A1').value), ws.name).toContain(DEMO_BANNER_SQ));
     // Demo citations keep their demo URL and flag.
     expect(allText(wb).some((t) => t.startsWith('demo://'))).toBe(true);
+    const sources = sheet(wb, SHEET_NAMES.sources);
+    const header = (sources.getRow(4).values as unknown[]).slice(1);
+    const demoColumn = header.indexOf('Fiktive (demo)') + 1;
+    input.citations.forEach((_, i) => expect(sources.getRow(5 + i).getCell(demoColumn).value).toBe('Po'));
+  });
+
+  it('keeps sheet titles free of any DEMO mark for real-data projects', async () => {
+    const wb = await load(await buildFinancialWorkbook(makeExportInput()));
+    wb.eachSheet((ws) => expect(String(ws.getCell('A1').value), ws.name).not.toContain('DEMO'));
+  });
+
+  it('excludes disabled startup lines from the SUMIF total, matching the engine', async () => {
+    const input = makeExportInput({
+      mutateInputs: (i) => ({ ...i, startupCosts: i.startupCosts.map((line, idx) => (idx === 0 ? { ...line, enabled: false } : line)) }),
+    });
+    const all = input.project.financialInputs.startupCosts.reduce((s, line) => s + line.amount, 0);
+    const base = input.projections.baze;
+    expect(base.capital.startupTotal).toBeLessThan(all);
+    const wb = await load(await buildFinancialWorkbook(input));
+    const startup = sheet(wb, SHEET_NAMES.startup);
+    const totalRow = startup.getColumn(3).values.findIndex((v) => v && typeof v === 'object' && 'formula' in (v as object));
+    expect(resultOf(startup.getCell(totalRow, 3))).toBeCloseTo(base.capital.startupTotal, 2);
+    expect(new FormulaEvaluator(wb).cellValue(SHEET_NAMES.startup, totalRow, 3)).toBeCloseTo(base.capital.startupTotal, 6);
+    expect(startup.getCell(5, 9).value).toBe('Jo');
+    const projection = sheet(wb, SHEET_NAMES.projection.konservator);
+    expect(resultOf(projection.getCell('E5'))).toBeCloseTo(base.capital.ownCapital - base.capital.startupTotal, 2);
   });
 
   it('uses 0-decimal money formats for JPY (currencyMinorUnits)', async () => {
@@ -298,6 +396,20 @@ describe('buildFinancialWorkbook — variants', () => {
 
   it('states that the owner salary is not included when it is off', async () => {
     const wb = await load(await buildFinancialWorkbook(makeExportInput({ includeOwnerSalary: false })));
-    expect(allText(wb).some((t) => t.includes('Paga e pronarit NUK përfshihet'))).toBe(true);
+    const texts = allText(wb);
+    expect(texts.some((t) => t.includes('Paga e pronarit NUK përfshihet'))).toBe(true);
+    expect(texts.some((t) => t.includes('Paga e pronarit përfshihet në kosto'))).toBe(false);
+  });
+
+  it('shows the values the engine used when inputs had to be corrected (negative amounts → 0)', async () => {
+    const input = makeExportInput({ mutateInputs: (i) => ({ ...i, ownCapital: -500 }) });
+    const wb = await load(await buildFinancialWorkbook(input));
+    const ws = sheet(wb, SHEET_NAMES.assumptions);
+    const row = (ws.getColumn(1).values as unknown[]).indexOf('Kapitali vetjak');
+    expect(ws.getCell(row, 2).value).toBe(0);
+    expect(input.projections.baze.capital.ownCapital).toBe(0);
+    const projection = sheet(wb, SHEET_NAMES.projection.baze);
+    expect(new FormulaEvaluator(wb).cellValue(SHEET_NAMES.projection.baze, 5, 5)).toBeCloseTo(-input.projections.baze.capital.startupTotal, 6);
+    expect(resultOf(projection.getCell('E5'))).toBeCloseTo(-input.projections.baze.capital.startupTotal, 2);
   });
 });

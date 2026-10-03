@@ -20,6 +20,7 @@ import { DEFAULT_SCORE_WEIGHTS } from '@/lib/domain/taxonomy';
 import { getArchetype } from '@/lib/ideas/archetypes';
 import { buildFinancialInputs } from '@/lib/finance/build';
 import type { AnthropicLike } from '@/lib/ai/claude';
+import { loadAssistantContext, type AssistantContext } from '@/lib/ai/context';
 
 export const USER_ID = '11111111-1111-4111-8111-111111111111';
 export const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
@@ -299,4 +300,22 @@ export function unwrap(content: string): { ok: boolean; data: unknown; citations
   const match = /^<untrusted_data source="[^"]+">\n([\s\S]*)\n<\/untrusted_data>$/.exec(content);
   if (!match) throw new Error(`not wrapped: ${content.slice(0, 80)}`);
   return JSON.parse(match[1]);
+}
+
+// ── Assistant context ───────────────────────────────────────────────────────
+
+/** Loads the assistant context the way runAssistant does; fails the test if the project is not found. */
+export async function loadContext(
+  store: Store,
+  opts: { projectId?: string | null; userId?: string; demoMode?: boolean } = {},
+): Promise<AssistantContext> {
+  const load = await loadAssistantContext({
+    store,
+    userId: opts.userId ?? USER_ID,
+    projectId: opts.projectId === undefined ? PROJECT_ID : opts.projectId,
+    now: NOW,
+    demoMode: opts.demoMode ?? false,
+  });
+  if (!load.ok) throw new Error('project not found');
+  return load.context;
 }

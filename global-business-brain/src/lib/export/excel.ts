@@ -20,7 +20,7 @@ import type {
 import { PHASE_TITLES, SCENARIO_LABELS, STARTUP_CATEGORY_LABELS, TASK_STATUS_LABELS } from '@/lib/domain/taxonomy';
 import { currencyMinorUnits } from '@/lib/finance/currency';
 import { normalizeSeasonality, STARTUP_CATEGORIES } from '@/lib/finance/engine';
-import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/finance/format';
+import { formatDate, formatDateTime, formatMoney } from '@/lib/finance/format';
 import {
   ASSUMPTIONS_NOT_GUARANTEES_SQ,
   categoryLabelSq,
@@ -32,15 +32,18 @@ import {
   DEMO_WARNING_SQ,
   dependenciesSq,
   engineAmount,
+  engineInputs,
   engineLineAmount,
   EXPORT_CREATOR,
   EXPORT_SCENARIOS,
+  exportTasks,
   indicatorNameSq,
   isDemoProject,
   minCashMonthSq,
   monthNameSq,
   NO_FINANCING_SQ,
   ownerSalaryStatementSq,
+  phaseBudgetTotal,
   PLAN_DISCLAIMER_SQ,
   sumEnabledLines,
   taxStatementSq,
@@ -407,7 +410,8 @@ function buildAssumptionsSheet(wb: ExcelJS.Workbook, ctx: Ctx): string {
   r = seasonalityRows(ws, r + 1, ctx);
   r = scenarioParamsRows(ws, r + 1, ctx);
   r = notesBlock(ws, r + 1, 'Shënimet e supozimeve', inputs.assumptionsNotesSq, 3);
-  notesBlock(ws, r, 'Supozimet e arketipit të biznesit', ctx.input.archetype.assumptionsSq, 3);
+  r = notesBlock(ws, r, 'Supozimet e arketipit të biznesit', ctx.input.archetype.assumptionsSq, 3);
+  notesBlock(ws, r, 'Formulat që përdor motori i aplikacionit', base.formulasSq, 3);
   freeze(ws, 3);
   return sheetRef(SHEET_NAMES.assumptions, `$B$${ownCapitalRow}`);
 }
@@ -569,7 +573,7 @@ function projectionTotals(ws: ExcelJS.Worksheet, r: number, projection: Projecti
 function buildProjectionSheet(wb: ExcelJS.Workbook, scenario: ScenarioId, ctx: Ctx, refs: Refs): void {
   const projection = ctx.input.projections[scenario];
   const ws = wb.addWorksheet(SHEET_NAMES.projection[scenario]);
-  setWidths(ws, [9, 12, 11, 12, ...Array.from({ length: 13 }, () => 15)]);
+  setWidths(ws, [10, 12, 11, 12, ...Array.from({ length: 13 }, () => 15)]);
   addTitle(ws, `Parashikimi mujor — skenari ${SCENARIO_LABELS[scenario]} (supozime, jo garanci) · ${ctx.currency}`);
   noteRow(ws, 2, ENGINE_CASH_NOTE_SQ, PROJECTION_COLUMNS_SQ.length);
   projectionTerms(ws, projection, refs, ctx.fmt);
@@ -730,8 +734,23 @@ function wrapRow(row: ExcelJS.Row, columns: number): void {
   for (let col = 1; col <= columns; col++) row.getCell(col).alignment = { wrapText: true, vertical: 'top' };
 }
 
+/** SUM of the phase budgets; the plan splits the enabled startup investment across the phases. */
+function phaseBudgetTotalRow(ws: ExcelJS.Worksheet, r: number, firstRow: number, ctx: Ctx): void {
+  const { plan, projections } = ctx.input;
+  const currencies = new Set(plan.phases.map((phase) => phase.budget.currency));
+  if (plan.phases.length === 0 || currencies.size !== 1) return; // a sum across currencies would mean nothing
+  const currency = plan.phases[0].budget.currency;
+  ws.getCell(r, 2).value = 'Buxheti i fazave gjithsej';
+  setFormula(ws.getCell(r, 5), `SUM(E${firstRow}:E${r - 1})`, phaseBudgetTotal(plan), formatsFor(currency).money);
+  ws.getCell(r, 6).value = currency;
+  ws.getCell(r, 7).value = `Buxhetet e fazave ndajnë investimin fillestar të zërave aktivë (${formatMoney(projections.baze.capital.startupTotal, currency)}); fazat me 0 kërkojnë kryesisht kohë.`;
+  styleTotal(ws.getRow(r), PHASE_COLUMNS_SQ.length);
+  wrapRow(ws.getRow(r), PHASE_COLUMNS_SQ.length);
+}
+
 function buildPlanSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
-  const { plan, progress, tasks } = ctx.input;
+  const { plan, progress } = ctx.input;
+  const tasks = exportTasks(ctx.input);
   const ws = wb.addWorksheet(SHEET_NAMES.plan);
   setWidths(ws, [10, 34, 60, 40, 14, 9, 36, 14, 36, 36, 36, 14]);
   addTitle(ws, 'Plani 0–100');
@@ -744,7 +763,8 @@ function buildPlanSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
   );
   noteRow(ws, 3, PLAN_DISCLAIMER_SQ, 12);
   writeHeader(ws, 5, PHASE_COLUMNS_SQ);
-  let r = 6;
+  const firstPhaseRow = 6;
+  let r = firstPhaseRow;
   for (const phase of plan.phases) {
     const row = ws.getRow(r);
     row.getCell(1).value = phase.rangeLabel || PHASE_TITLES[phase.id]?.range || phase.id;
@@ -763,7 +783,8 @@ function buildPlanSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
     wrapRow(row, PHASE_COLUMNS_SQ.length);
     r++;
   }
-  r += 1;
+  phaseBudgetTotalRow(ws, r, firstPhaseRow, ctx);
+  r += 2;
   ws.getCell(r, 1).value = 'Detyrat';
   ws.getCell(r, 1).font = { bold: true, size: 12 };
   writeHeader(ws, r + 1, TASK_COLUMNS_SQ);
@@ -802,6 +823,7 @@ const SOURCE_COLUMNS_SQ = [
   'Përditësuar nga burimi',
   'Parashikim',
   'Fiktive (demo)',
+  'Shënim',
 ];
 
 const FX_KIND_LABELS_SQ: Record<FxRate['kind'], string> = {
@@ -836,7 +858,7 @@ function fxTable(ws: ExcelJS.Worksheet, start: number, rates: readonly FxRate[])
 function buildSourcesSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
   const { citations, archetype, project } = ctx.input;
   const ws = wb.addWorksheet(SHEET_NAMES.sources);
-  setWidths(ws, [32, 40, 22, 9, 14, 16, 22, 60, 22, 18, 11, 12]);
+  setWidths(ws, [32, 40, 22, 10, 14, 16, 22, 60, 22, 18, 11, 12, 40]);
   addTitle(ws, 'Burimet e të dhënave');
   noteRow(
     ws,
@@ -863,6 +885,8 @@ function buildSourcesSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
     ws.getCell(r, 10).value = c.sourceLastUpdated ? formatDate(c.sourceLastUpdated) : '—';
     ws.getCell(r, 11).value = yesNo(c.isProjection === true);
     ws.getCell(r, 12).value = yesNo(c.isDemo === true);
+    ws.getCell(r, 13).value = c.noteSq ?? '';
+    ws.getCell(r, 13).alignment = { wrapText: true, vertical: 'top' };
     r++;
   }
   r = fxTable(ws, r + 1, project.dataSnapshot.fxRates ?? []);
@@ -879,13 +903,26 @@ function buildSourcesSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
   freeze(ws, 4);
 }
 
+/**
+ * Demo projects carry the DEMO mark on every sheet (title + red tab), not only on the summary,
+ * because a single sheet is often copied or printed on its own.
+ */
+function markDemoSheets(wb: ExcelJS.Workbook): void {
+  for (const ws of wb.worksheets) {
+    const title = ws.getCell('A1');
+    title.value = `${String(title.value ?? '')} · ${DEMO_BANNER_SQ}`;
+    title.font = { ...title.font, ...DEMO_FONT, size: 14 };
+    ws.properties.tabColor = { argb: 'FFC00000' };
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Builds the financial workbook (.xlsx) for a project; deterministic for a given input. */
 export async function buildFinancialWorkbook(input: ExportInput): Promise<Buffer> {
-  const inputs = input.project.financialInputs;
+  const inputs = engineInputs(input);
   const currency = inputs.currency;
   const ctx: Ctx = {
     input,
@@ -916,6 +953,7 @@ export async function buildFinancialWorkbook(input: ExportInput): Promise<Buffer
   buildCapitalSheet(wb, ctx);
   buildPlanSheet(wb, ctx);
   buildSourcesSheet(wb, ctx);
+  if (isDemoProject(input)) markDemoSheets(wb);
 
   const data = await wb.xlsx.writeBuffer();
   return Buffer.from(data as ArrayBuffer);

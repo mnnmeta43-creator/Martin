@@ -118,8 +118,10 @@ export function toolNeedsProject(name: ToolName): boolean {
 }
 
 function inputSchemaOf(schema: z.ZodType): BetaTool['input_schema'] {
-  const { $schema: _ignored, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
-  return { ...rest, type: 'object' } as BetaTool['input_schema'];
+  // The "$schema" dialect marker is not part of a tool's input_schema.
+  const json = { ...(z.toJSONSchema(schema) as Record<string, unknown>) };
+  delete json.$schema;
+  return { ...json, type: 'object' } as BetaTool['input_schema'];
 }
 
 /** Tool definitions in a fixed order (a stable prefix keeps the prompt cache warm). */

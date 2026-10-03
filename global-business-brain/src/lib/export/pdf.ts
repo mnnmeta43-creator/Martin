@@ -23,6 +23,7 @@ import {
   DEMO_BANNER_SQ,
   DEMO_WARNING_SQ,
   dependenciesSq,
+  engineInputs,
   engineLineAmount,
   EXPORT_CREATOR,
   EXPORT_SCENARIOS,
@@ -33,6 +34,7 @@ import {
   monthNameSq,
   NO_FINANCING_SQ,
   ownerSalaryStatementSq,
+  phaseBudgetTotal,
   PLAN_DISCLAIMER_SQ,
   taxStatementSq,
   type ExportInput,
@@ -138,6 +140,11 @@ function bottomLimit(p: Pdf): number {
   return p.doc.page.height - p.doc.page.margins.bottom;
 }
 
+/** Usable height of a whole page; blocks taller than this cannot be kept together. */
+function pageSpace(p: Pdf): number {
+  return bottomLimit(p) - p.doc.page.margins.top;
+}
+
 /** Starts a new page when the next block (of known height) would not fit on this one. */
 function ensureSpace(p: Pdf, height: number): void {
   if (p.doc.y + height > bottomLimit(p)) p.doc.addPage();
@@ -184,11 +191,21 @@ function bullets(p: Pdf, items: readonly string[], size = 10): void {
   p.doc.y += 2;
 }
 
-/** Label in a fixed left column, value wrapped in the right column; kept on one page when it fits. */
+/**
+ * Label in a fixed left column, value wrapped in the right column, always kept on one page.
+ * Two columns cannot continue across a page break together, so a value taller than a page is
+ * written as a heading line plus a normal (flowing) paragraph instead.
+ */
 function keyValue(p: Pdf, label: string, value: string, labelWidth = 165): void {
   const valueWidth = p.width - labelWidth - 10;
   const height = Math.max(measure(p, label, labelWidth, FONT.bold, 10), measure(p, value, valueWidth, FONT.regular, 10));
-  ensureSpace(p, Math.min(height, 200));
+  if (height > pageSpace(p) - 10) {
+    ensureSpace(p, 40);
+    para(p, label, { font: FONT.bold, gapAfter: 2 });
+    para(p, value);
+    return;
+  }
+  ensureSpace(p, height);
   const y = p.doc.y;
   p.doc.font(FONT.bold).fontSize(10).fillColor(COLOR.text).text(toWinAnsi(label), p.left, y, { width: labelWidth, lineGap: 2 });
   const afterLabel = p.doc.y;
@@ -227,14 +244,19 @@ function progressBar(p: Pdf, pct: number): void {
   p.doc.y = y + 14;
 }
 
+/**
+ * Simple grid with a shaded header row. The header is repeated after a page break, and a row
+ * taller than a page is clipped with an ellipsis (otherwise each cell would continue on its own
+ * new page and the columns would fall apart).
+ */
 function table(p: Pdf, widths: readonly number[], header: readonly string[], rows: readonly (readonly string[])[]): void {
   const total = widths.reduce((s, w) => s + w, 0);
-  const scale = p.width / total;
-  const cols = widths.map((w) => w * scale);
-  const drawRow = (cells: readonly string[], bold: boolean) => {
+  const cols = widths.map((w) => (w * p.width) / total);
+  const maxRowHeight = pageSpace(p) / 2;
+  const rowHeight = (cells: readonly string[], bold: boolean) =>
+    Math.min(maxRowHeight, Math.max(...cells.map((c, i) => measure(p, c, cols[i] - 6, bold ? FONT.bold : FONT.regular, 9))) + 6);
+  const drawRow = (cells: readonly string[], bold: boolean, height: number) => {
     const font = bold ? FONT.bold : FONT.regular;
-    const height = Math.max(...cells.map((c, i) => measure(p, c, cols[i] - 6, font, 9))) + 6;
-    ensureSpace(p, height);
     const y = p.doc.y;
     if (bold) {
       p.doc.save();
@@ -243,7 +265,11 @@ function table(p: Pdf, widths: readonly number[], header: readonly string[], row
     }
     let x = p.left;
     cells.forEach((cell, i) => {
-      p.doc.font(font).fontSize(9).fillColor(COLOR.text).text(toWinAnsi(cell), x + 3, y + 3, { width: cols[i] - 6, lineGap: 2 });
+      p.doc
+        .font(font)
+        .fontSize(9)
+        .fillColor(COLOR.text)
+        .text(toWinAnsi(cell), x + 3, y + 3, { width: cols[i] - 6, height: height - 6, ellipsis: true, lineGap: 2 });
       x += cols[i];
     });
     p.doc.save();
@@ -252,8 +278,18 @@ function table(p: Pdf, widths: readonly number[], header: readonly string[], row
     p.doc.y = y + height;
     p.doc.x = p.left;
   };
-  drawRow(header, true);
-  rows.forEach((row) => drawRow(row, false));
+  const headerHeight = rowHeight(header, true);
+  // Keep the header together with the first row.
+  ensureSpace(p, headerHeight + (rows.length > 0 ? rowHeight(rows[0], false) : 0));
+  drawRow(header, true, headerHeight);
+  for (const row of rows) {
+    const height = rowHeight(row, false);
+    if (p.doc.y + height > bottomLimit(p)) {
+      p.doc.addPage();
+      drawRow(header, true, headerHeight);
+    }
+    drawRow(row, false, height);
+  }
   p.doc.y += 8;
 }
 
@@ -271,21 +307,25 @@ function rule(p: Pdf): void {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const BOX = 9;
+/** Distinct stroke widths for the marks (also lets tests count them in the content stream). */
+export const CHECKBOX_STROKES = { border: 0.8, done: 1.4, skipped: 1.2 } as const;
 
 function drawCheckbox(p: Pdf, x: number, y: number, status: TaskStatus): void {
   const { doc } = p;
   doc.save();
   if (status === 'ne_progres') doc.rect(x, y, BOX / 2, BOX).fill(COLOR.accent);
-  doc.lineWidth(0.8).rect(x, y, BOX, BOX).stroke(COLOR.text);
+  doc.lineWidth(CHECKBOX_STROKES.border).rect(x, y, BOX, BOX).stroke(COLOR.text);
   if (status === 'perfunduar') {
     doc
-      .lineWidth(1.4)
+      .lineWidth(CHECKBOX_STROKES.done)
       .moveTo(x + 1.8, y + BOX * 0.55)
       .lineTo(x + BOX * 0.42, y + BOX - 1.8)
       .lineTo(x + BOX - 1.5, y + 1.5)
       .stroke(COLOR.accent);
   }
-  if (status === 'anashkaluar') doc.lineWidth(1).moveTo(x + 2, y + BOX / 2).lineTo(x + BOX - 2, y + BOX / 2).stroke(COLOR.muted);
+  if (status === 'anashkaluar') {
+    doc.lineWidth(CHECKBOX_STROKES.skipped).moveTo(x + 2, y + BOX / 2).lineTo(x + BOX - 2, y + BOX / 2).stroke(COLOR.muted);
+  }
   doc.restore();
 }
 
@@ -360,7 +400,7 @@ function coverSection({ p, input }: Section): void {
 
 function keyNumbers({ p, input, money }: Section): void {
   const base = input.projections.baze;
-  const inputs = input.project.financialInputs;
+  const inputs = engineInputs(input);
   heading(p, 'Shifrat kryesore — skenari Bazë');
   para(p, `Supozime të motorit financiar, jo garanci. ${ASSUMPTIONS_NOT_GUARANTEES_SQ}`, { font: FONT.italic, size: 9, color: COLOR.muted, gapAfter: 8 });
   keyValue(p, 'Investimi fillestar (supozim)', money(base.capital.startupTotal));
@@ -368,7 +408,7 @@ function keyNumbers({ p, input, money }: Section): void {
   keyValue(p, 'Kapitali vetjak', money(base.capital.ownCapital));
   keyValue(p, 'Mungesa e kapitalit', money(base.capital.gap));
   keyValue(p, 'Pika e barazimit në muaj (supozim)', breakEvenSq(base.unitEconomics, inputs.unitLabelSq));
-  keyValue(p, 'Rikuperimi i investimit', base.payback.statementSq);
+  keyValue(p, 'Rikuperimi i investimit (vlerësim, jo datë e garantuar)', base.payback.statementSq);
   keyValue(p, 'Paraja më e ulët (supozim)', `${money(base.minCashBalance)} — ${minCashMonthSq(base.minCashMonth)}`);
   keyValue(p, 'Paga e pronarit', ownerSalaryStatementSq(inputs, (v) => money(v)));
   keyValue(p, 'Tatimi', taxStatementSq(inputs));
@@ -451,6 +491,15 @@ function phasesSection({ p, input }: Section): void {
     keyValue(p, 'Vazhdo nëse', phase.continueCriterionSq);
     keyValue(p, 'Ndalo nëse', phase.stopCriterionSq);
   });
+  const currencies = new Set(plan.phases.map((phase) => phase.budget.currency));
+  if (plan.phases.length > 0 && currencies.size === 1) {
+    rule(p);
+    keyValue(
+      p,
+      'Buxheti i fazave gjithsej (supozim)',
+      `${moneyFormatter(plan.phases[0].budget.currency)(phaseBudgetTotal(plan))} — ndan investimin fillestar të zërave aktivë; fazat me 0 kërkojnë kryesisht kohë.`,
+    );
+  }
 }
 
 // The plan's horizons are cumulative (d30 ⊇ d7); later lists show only tasks not listed above.
@@ -482,7 +531,7 @@ function tasksSection({ p, input }: Section): void {
 }
 
 function assumptionsSection({ p, input, money }: Section): void {
-  const inputs = input.project.financialInputs;
+  const inputs = engineInputs(input);
   const { archetype } = input;
   p.doc.addPage();
   heading(p, 'Supozimet', 20);

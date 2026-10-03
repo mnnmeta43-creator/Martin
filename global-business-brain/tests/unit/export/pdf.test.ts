@@ -3,14 +3,36 @@
  * fundfaqja "Faqja X nga Y" dhe pastrimi i tekstit për kodimin WinAnsi.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import { buildPlanPdf, toWinAnsi, type ExportInput } from '@/lib/export/pdf';
-import { DEMO_BANNER_SQ, PLAN_DISCLAIMER_SQ } from '@/lib/export/common';
-import { formatNumber } from '@/lib/finance/format';
+import type { PlanTask, TaskStatus } from '@/lib/domain/types';
+import { TASK_STATUS_LABELS } from '@/lib/domain/taxonomy';
+import { buildPlanPdf, CHECKBOX_STROKES, toWinAnsi, type ExportInput } from '@/lib/export/pdf';
+import { breakEvenSq, DEMO_BANNER_SQ, dependenciesSq, minCashMonthSq, PLAN_DISCLAIMER_SQ } from '@/lib/export/common';
+import { formatDateTime, formatNumber } from '@/lib/finance/format';
 import { makeExportInput } from './fixtures';
 import { countPdfPages, extractPdfLines, extractPdfText } from './pdfText';
 
 function normalize(text: string): string {
-  return toWinAnsi(text).replace(/[\s ]+/g, ' ');
+  return toWinAnsi(text).replace(/\s+/g, ' ');
+}
+
+/** Whitespace-free form: line wrapping may break after "/" or "-", which adds a space when lines are joined. */
+function compact(text: string): string {
+  return toWinAnsi(text).replace(/\s+/g, '');
+}
+
+function money(value: number, currency = 'EUR'): string {
+  return `${formatNumber(value, 2)} ${currency}`;
+}
+
+function count(source: string, pattern: RegExp): number {
+  return (source.match(pattern) ?? []).length;
+}
+
+/** Tasks shown in the 7/30/90-day lists (cumulative horizons, each task once) with current statuses. */
+function listedTasks(input: ExportInput): PlanTask[] {
+  const byId = new Map(input.tasks.map((t) => [t.id, t]));
+  const ids = new Set([...input.plan.horizons.d7, ...input.plan.horizons.d30, ...input.plan.horizons.d90]);
+  return [...ids].map((id) => byId.get(id)).filter((t): t is PlanTask => Boolean(t));
 }
 
 describe('buildPlanPdf', () => {
@@ -71,21 +93,46 @@ describe('buildPlanPdf', () => {
 
   it('lists the base-scenario key numbers as assumptions, with the engine values', () => {
     const base = input.projections.baze;
-    const money = (v: number) => normalize(`${formatNumber(v, 2)} ${input.project.financialInputs.currency}`);
+    const inputs = input.project.financialInputs;
+    const flat = compact(text);
     expect(text).toContain('Investimi fillestar (supozim)');
-    expect(text).toContain(money(base.capital.startupTotal));
-    expect(text).toContain(money(base.capital.totalRequired));
-    expect(text).toContain(normalize(base.payback.statementSq));
+    expect(text).toContain(normalize(money(base.capital.startupTotal)));
+    expect(text).toContain('Kapitali i nevojshëm (supozim)');
+    expect(text).toContain(normalize(money(base.capital.totalRequired)));
+    expect(flat).toContain(compact('Pika e barazimit në muaj (supozim)'));
+    expect(flat).toContain(compact(breakEvenSq(base.unitEconomics, inputs.unitLabelSq)));
+    expect(flat).toContain(compact('Rikuperimi i investimit (vlerësim, jo datë e garantuar)'));
+    expect(flat).toContain(compact(base.payback.statementSq));
     expect(text).toContain('Paraja më e ulët (supozim)');
+    expect(flat).toContain(compact(`${money(base.minCashBalance)} — ${minCashMonthSq(base.minCashMonth)}`));
+    expect(flat).toContain(compact('Paga e pronarit përfshihet në kosto'));
+    expect(flat).toContain(compact('Nuk supozohet asnjë kredi, grant apo financim tjetër'));
   });
 
-  it('renders every phase with its criteria and budget', () => {
+  it('renders all 10 phases with actions, output, budget, dependencies, proof and continue/stop criteria', () => {
+    const flat = compact(text);
+    expect(input.plan.phases).toHaveLength(10);
     for (const phase of input.plan.phases) {
       expect(text).toContain(normalize(`${phase.rangeLabel} · ${phase.titleSq}`));
-      expect(text).toContain(normalize(phase.stopCriterionSq));
-      expect(text).toContain(normalize(phase.continueCriterionSq));
+      for (const action of phase.actionsSq) expect(flat, action).toContain(compact(action));
+      expect(flat).toContain(compact(`Rezultati ${phase.outputSq}`));
+      expect(flat).toContain(compact(`Buxheti (supozim) ${money(phase.budget.amount, phase.budget.currency)} — ${phase.budget.basisSq}`));
+      expect(flat).toContain(compact(`Varësitë ${dependenciesSq(phase.dependencies)}`));
+      expect(flat).toContain(compact(`Prova e përfundimit ${phase.proofOfCompletionSq}`));
+      expect(flat).toContain(compact(`Vazhdo nëse ${phase.continueCriterionSq}`));
+      expect(flat).toContain(compact(`Ndalo nëse ${phase.stopCriterionSq}`));
     }
-    expect(text).toContain('Buxheti (supozim)');
+    const budgetTotal = input.plan.phases.reduce((s, phase) => s + phase.budget.amount, 0);
+    expect(budgetTotal).toBeCloseTo(input.projections.baze.capital.startupTotal, 6);
+    expect(flat).toContain(compact(`Buxheti i fazave gjithsej (supozim) ${money(budgetTotal)}`));
+  });
+
+  it('uses only the standard Helvetica fonts with WinAnsi encoding (nothing embedded or downloaded)', () => {
+    const raw = pdf.toString('latin1');
+    const fonts = new Set([...raw.matchAll(/\/BaseFont \/([\w-]+)/g)].map((m) => m[1]));
+    expect([...fonts].sort()).toEqual(['Helvetica', 'Helvetica-Bold', 'Helvetica-Oblique']);
+    expect(raw).not.toMatch(/\/FontFile/);
+    expect(count(raw, /\/Encoding \/WinAnsiEncoding/g)).toBe(fonts.size);
   });
 
   it('lists the 7/30/90-day tasks with their current status', () => {
@@ -107,9 +154,11 @@ describe('buildPlanPdf', () => {
   });
 
   it('lists every citation URL with its retrieval date', () => {
-    const compact = text.replace(/\s+/g, '');
-    for (const c of input.citations) expect(compact).toContain(c.url.replace(/\s+/g, ''));
-    expect(text).toContain('Marrë më:');
+    const flat = compact(text);
+    for (const c of input.citations) {
+      expect(flat).toContain(compact(`URL: ${c.url}`));
+      expect(flat).toContain(compact(`Marrë më: ${formatDateTime(c.retrievedAt)}`));
+    }
     expect(text).toContain('nuk janë çmime të verifikuara');
   });
 
@@ -128,6 +177,58 @@ describe('buildPlanPdf', () => {
   it('is deterministic for the same input (dates come from the input, not the clock)', async () => {
     const again = await buildPlanPdf(input, { compress: false });
     expect(extractPdfText(again)).toBe(text);
+  });
+});
+
+describe('buildPlanPdf — task checkboxes', () => {
+  it.each<[string, TaskStatus[]]>([
+    ['mixed statuses', ['perfunduar', 'ne_progres', 'anashkaluar', 'perfunduar']],
+    ['everything done', Array.from({ length: 60 }, () => 'perfunduar' as const)],
+    ['nothing started', []],
+  ])('draws one square per listed task and marks that match the statuses (%s)', async (_, statuses) => {
+    const input = makeExportInput({ statuses });
+    const raw = (await buildPlanPdf(input, { compress: false })).toString('latin1');
+    const listed = listedTasks(input);
+    const withStatus = (status: TaskStatus) => listed.filter((t) => t.status === status).length;
+    expect(listed.length).toBeGreaterThan(0);
+    // pdfkit writes rectangles as "x y w h re" and line widths as "<w> w".
+    expect(count(raw, /\s9 9 re\n/g)).toBe(listed.length);
+    expect(count(raw, new RegExp(`^${CHECKBOX_STROKES.done} w$`, 'gm'))).toBe(withStatus('perfunduar'));
+    expect(count(raw, /\s4\.5 9 re\n/g)).toBe(withStatus('ne_progres'));
+    expect(count(raw, new RegExp(`^${CHECKBOX_STROKES.skipped} w$`, 'gm'))).toBe(withStatus('anashkaluar'));
+  });
+
+  it('writes each listed task with its status label next to its square', async () => {
+    const input = makeExportInput({ statuses: ['perfunduar', 'ne_progres', 'anashkaluar'] });
+    const flat = compact(extractPdfText(await buildPlanPdf(input, { compress: false })));
+    for (const task of listedTasks(input)) {
+      const status = TASK_STATUS_LABELS[task.status];
+      expect(flat).toContain(compact(`${task.titleSq} Dita ${task.dayOffset + 1} · ${formatNumber(task.durationDays, 0)} ditë · ${status}`));
+    }
+  });
+});
+
+describe('buildPlanPdf — variants', () => {
+  it('states that the owner salary is not included when it is off', async () => {
+    const text = compact(extractPdfText(await buildPlanPdf(makeExportInput({ includeOwnerSalary: false }), { compress: false })));
+    expect(text).toContain(compact('Paga e pronarit NUK përfshihet në kosto'));
+    expect(text).not.toContain(compact('Paga e pronarit përfshihet në kosto'));
+  });
+
+  it('renders Ë, ë, Ç and ç from user text as WinAnsi letters, not replacement marks', async () => {
+    const base = makeExportInput();
+    const title = 'ËNDËRR e çelët: Çajtore në qytet';
+    const input: ExportInput = { ...base, project: { ...base.project, title } };
+    const pdf = await buildPlanPdf(input, { compress: false });
+    expect(extractPdfLines(pdf)).toContain(title);
+    // WinAnsi bytes inside the text-showing (TJ) operators: Ë = CB, ë = EB, Ç = C7, ç = E7.
+    const bytes = new Set<number>();
+    for (const tj of pdf.toString('latin1').matchAll(/\[([^\]]*)\]\s*TJ/g)) {
+      for (const hex of tj[1].matchAll(/<([0-9a-fA-F]*)>/g)) {
+        for (let i = 0; i + 1 < hex[1].length; i += 2) bytes.add(parseInt(hex[1].slice(i, i + 2), 16));
+      }
+    }
+    for (const byte of [0xcb, 0xeb, 0xc7, 0xe7]) expect(bytes.has(byte), byte.toString(16)).toBe(true);
   });
 });
 
@@ -152,6 +253,47 @@ describe('buildPlanPdf — long text and edge cases', () => {
     expect(pages).toBeGreaterThan(countPdfPages(await buildPlanPdf(base, { compress: false })));
     expect(extractPdfLines(pdf)).toContain(`Faqja ${pages} nga ${pages}`);
     expect(extractPdfText(pdf)).toContain('fjalë2999');
+  });
+
+  it('keeps over-long values, table cells and unbroken URLs inside the pages', async () => {
+    const base = makeExportInput();
+    const longOutput = Array.from({ length: 1500 }, (_, i) => `rezultat${i}`).join(' ');
+    const longLabel = 'Zë kostoje shumë i gjatë '.repeat(300);
+    const longUrl = `https://example.invalid/${'x'.repeat(700)}`;
+    const inputs = base.project.financialInputs;
+    const input: ExportInput = {
+      ...base,
+      project: {
+        ...base.project,
+        financialInputs: { ...inputs, startupCosts: inputs.startupCosts.map((l, i) => (i === 0 ? { ...l, labelSq: longLabel } : l)) },
+      },
+      plan: { ...base.plan, phases: base.plan.phases.map((ph, i) => (i === 0 ? { ...ph, outputSq: longOutput } : ph)) },
+      citations: [{ ...base.citations[0], url: longUrl }],
+    };
+    const pdf = await buildPlanPdf(input, { compress: false });
+    const pages = countPdfPages(pdf);
+    const lines = extractPdfLines(pdf);
+    expect(lines.filter((l) => /^Faqja \d+ nga \d+$/.test(l))).toHaveLength(pages);
+    const flat = compact(extractPdfText(pdf));
+    expect(flat).toContain('rezultat0rezultat1');
+    expect(flat).toContain('rezultat1499');
+    expect(flat).toContain(compact(`URL: ${longUrl}`));
+    // The over-long table cell is clipped with an ellipsis instead of spilling over several pages.
+    expect(lines.some((l) => l.endsWith('…'))).toBe(true);
+    expect(flat).toContain(compact('Kostot fikse mujore'));
+    expect(pages).toBeLessThan(countPdfPages(await buildPlanPdf(base, { compress: false })) + 6);
+  });
+
+  it('repeats the table header when a long table continues on the next page', async () => {
+    const base = makeExportInput();
+    const inputs = base.project.financialInputs;
+    const many = Array.from({ length: 90 }, (_, i) => ({ ...inputs.startupCosts[0], id: `ze-${i}`, labelSq: `Zë testues ${i}` }));
+    const input: ExportInput = { ...base, project: { ...base.project, financialInputs: { ...inputs, startupCosts: many } } };
+    const lines = extractPdfLines(await buildPlanPdf(input, { compress: false }));
+    // One header for the monthly-costs table, at least two for the 90-line startup table.
+    expect(lines.filter((l) => l === 'Zëri').length).toBeGreaterThanOrEqual(3);
+    expect(lines).toContain('Zë testues 0');
+    expect(lines).toContain('Zë testues 89');
   });
 
   it('handles a project with no citations and no tasks in a horizon', async () => {
