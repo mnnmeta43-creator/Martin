@@ -26,7 +26,8 @@ export default async function Dashboard() {
   ]);
   const lastOk = logs.filter((l) => l.status === 'ok').sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))[0];
   const failing = logs.filter((l) => l.status === 'gabim');
-  const integrated = SOURCES.filter((s) => s.status === 'integruar' || s.status === 'integruar_pa_verifikim_live').length;
+  const withAdapters = SOURCES.filter((s) => s.apiBaseUrl && (s.status === 'integruar' || s.status === 'integruar_pa_verifikim_live'));
+  const notYetVerified = withAdapters.filter((s) => s.status === 'integruar_pa_verifikim_live').length;
 
   return (
     <div className="space-y-6">
@@ -161,8 +162,11 @@ export default async function Dashboard() {
           <CardHeader title="Gjendja e të dhënave" actions={<ButtonLink href="/burimet" variant="ghost" size="sm">Burimet</ButtonLink>} />
           <ul className="space-y-2 text-sm">
             <li className="flex justify-between gap-2">
-              <span className="text-muted">Burime të integruara</span>
-              <span className="text-ink">{integrated}</span>
+              <span className="text-muted">Burime me përshtatës të ndërtuar</span>
+              <span className="text-right text-ink">
+                {withAdapters.length}
+                {notYetVerified > 0 ? ` (ende pa verifikim live: ${notYetVerified})` : ''}
+              </span>
             </li>
             <li className="flex justify-between gap-2">
               <span className="text-muted">Rifreskimi i fundit i suksesshëm</span>

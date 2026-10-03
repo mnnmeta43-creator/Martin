@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MoneyRange } from '@/lib/domain/types';
 import { validateArchetype } from '@/lib/ideas/archetypes/validate';
-import { assessProfileFit, assessProfileFitDetailed, TEAM_BLOCKER_PREFIX_SQ } from '@/lib/ideas/fit';
+import { assessProfileFit, assessProfileFitDetailed, REGULATORY_PREFIX_SQ, TEAM_BLOCKER_PREFIX_SQ } from '@/lib/ideas/fit';
 import { archetypeVariant, IDEAS_ARCHETYPE, testProfile } from '../../fixtures/ideasArchetype';
 
 // SYNTHETIC — round test amounts, not real costs.
@@ -144,7 +144,7 @@ describe('assessProfileFit — regulation and risk tolerance', () => {
 
   it('regulated ideas name the licensed professionals and require local verification', () => {
     const fit = assessProfileFit(regulated, testProfile(), ENOUGH);
-    const note = fit.mismatchesSq.find((m) => m.startsWith('Veprimtari e rregulluar'));
+    const note = fit.mismatchesSq.find((m) => m.startsWith(REGULATORY_PREFIX_SQ));
     expect(note).toContain('Kërkon verifikim lokal');
     expect(note).toContain('profesionist i licencuar (test)');
     expect(fit.eligible).toBe(true);

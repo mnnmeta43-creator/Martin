@@ -38,7 +38,7 @@ describe('runAssistant with the SQL store', () => {
     expect(reply.missingConfigSq).toBe(MISSING_KEY_SQ);
     const project = await store.projects.get(ownerId, projectId);
     const after = projectScenario(applyShock(project!.financialInputs, { fixedCostPct: 10, variableCostPct: 10 }), 'baze');
-    expect(reply.calculations?.find((c) => c.labelSq === 'Arka më e ulët')?.after).toBe(after.minCashBalance);
+    expect(reply.calculations?.find((c) => c.labelSq === 'Gjendja më e ulët e parasë')?.after).toBe(after.minCashBalance);
     expect(await store.chat.list(ownerId, projectId)).toEqual([
       { role: 'user', content: question },
       { role: 'assistant', content: reply.replySq },

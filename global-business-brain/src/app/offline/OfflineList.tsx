@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { listSnapshots, type OfflineProjectSnapshot } from '@/lib/client/offline';
 import { formatDateTime } from '@/lib/finance/format';
 
+const subscribeNever = () => () => {};
+
 export function OfflineList() {
-  const [items, setItems] = useState<OfflineProjectSnapshot[] | null>(null);
-  useEffect(() => setItems(listSnapshots()), []);
+  // localStorage exists only in the browser: render nothing on the server and on the first client pass.
+  const inBrowser = useSyncExternalStore(subscribeNever, () => true, () => false);
+  const items = useMemo<OfflineProjectSnapshot[] | null>(() => (inBrowser ? listSnapshots() : null), [inBrowser]);
   if (items === null) return null;
   if (items.length === 0) {
     return <p className="text-sm text-muted">Nuk ka projekte të ruajtura në këtë pajisje. Hapni një projekt kur jeni online që ta keni edhe offline.</p>;

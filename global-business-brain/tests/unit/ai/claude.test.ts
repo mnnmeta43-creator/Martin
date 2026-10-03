@@ -157,7 +157,7 @@ describe('Claude path: tool_use → tool_result → final answer', () => {
     expect(reply.calculations).toEqual([
       { labelSq: 'Të ardhurat totale', scenario: 'baze', before: before.totals.revenue, after: after.totals.revenue, currency: 'USD' },
       { labelSq: 'Rezultati operativ total', scenario: 'baze', before: before.totals.operatingResult, after: after.totals.operatingResult, currency: 'USD' },
-      { labelSq: 'Arka më e ulët', scenario: 'baze', before: before.minCashBalance, after: after.minCashBalance, currency: 'USD' },
+      { labelSq: 'Gjendja më e ulët e parasë', scenario: 'baze', before: before.minCashBalance, after: after.minCashBalance, currency: 'USD' },
       { labelSq: 'Kapitali i nevojshëm', scenario: 'baze', before: before.capital.totalRequired, after: after.capital.totalRequired, currency: 'USD' },
     ]);
     const data = unwrap(toolResultsOf(client.calls[1])[0].content).data as { metrics: { key: string; after: number | null }[] };

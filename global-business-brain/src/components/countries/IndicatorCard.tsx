@@ -1,5 +1,5 @@
 import type { IndicatorSeries } from '@/lib/domain/types';
-import { getSource } from '@/lib/data/sources/registry';
+import { citationForObservation } from '@/lib/analysis/citations';
 import { formatIndicatorValue, formatPeriod } from '@/lib/finance/format';
 import { LineChart } from '@/components/charts/LineChart';
 import type { ChartUnit } from '@/components/charts/scale';
@@ -32,7 +32,6 @@ export function IndicatorCard({
 }) {
   const d = series.definition;
   const latest = series.latest;
-  const src = getSource(d.sourceId);
   return (
     <article className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -101,23 +100,7 @@ export function IndicatorCard({
         </Disclosure>
       ) : null}
       {latest ? (
-        <CitationList
-          className="mt-3 space-y-0.5"
-          citations={[
-            {
-              sourceId: latest.sourceId,
-              sourceName: src?.nameSq ?? latest.sourceId,
-              url: latest.sourceUrl,
-              indicatorCode: d.code,
-              period: latest.period,
-              retrievedAt: latest.retrievedAt,
-              sourceLastUpdated: latest.sourceLastUpdated ?? null,
-              isDemo: latest.isDemo,
-              isProjection: latest.isProjection,
-              noteSq: `kodi ${d.sourceCode}`,
-            },
-          ]}
-        />
+        <CitationList className="mt-3 space-y-0.5" citations={[{ ...citationForObservation(d, latest), noteSq: latest.isDemo ? 'vlerë fiktive' : `kodi ${d.sourceCode}` }]} />
       ) : null}
     </article>
   );

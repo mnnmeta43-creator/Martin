@@ -226,7 +226,10 @@ function renderTasks(data: Data<typeof listTasksDue>, title: string): string {
 function renderCosts(data: Data<typeof runFinancialScenario>): string {
   const lines = [`Nëse ${data.shockSq} (skenari ${data.scenarioSq}, ${data.horizonMonths} muaj):`];
   for (const m of data.metrics) lines.push(`• ${m.labelSq}: ${m.beforeSq} → ${m.afterSq} (${m.changeSq})`);
-  if (data.minCashMonth.after !== null) lines.push(`• Arka më e ulët pas ndryshimit bie në muajin ${data.minCashMonth.after}.`);
+  if (data.minCashMonth.after !== null) {
+    const when = data.minCashMonth.after === 0 ? 'menjëherë pas investimit fillestar, para muajit 1' : `në muajin ${data.minCashMonth.after}`;
+    lines.push(`• Gjendja më e ulët e parasë pas ndryshimit: ${when}.`);
+  }
   lines.push('', `Rikuperimi: ${data.paybackStatementSq.after}`, '', data.noteSq);
   return lines.join('\n');
 }

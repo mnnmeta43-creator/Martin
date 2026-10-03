@@ -43,7 +43,10 @@ export default async function ComparePage(props: { searchParams: Promise<Record<
   const codes = Array.from(new Set(raw.split(',').map((s) => s.trim()).filter((c) => countries.some((x) => x.code === c)))).slice(0, 5);
   const ideaId = Array.isArray(sp.ideja) ? sp.ideja[0] : sp.ideja ?? '';
   const archetype = ideaId ? getArchetype(ideaId) : undefined;
-  const contexts = codes.length >= 2 && viewer.store ? await loadContexts(viewer, codes) : [];
+  const demoCodes = countries.filter((c) => c.isDemo).map((c) => c.code);
+  // Fictional demo economies are never compared with real countries.
+  const mixed = codes.some((c) => demoCodes.includes(c)) && codes.some((c) => !demoCodes.includes(c));
+  const contexts = codes.length >= 2 && viewer.store && !mixed ? await loadContexts(viewer, codes) : [];
   const table = contexts.length >= 2 ? compareCountries(contexts, INDICATORS_TO_COMPARE) : null;
   const ideaCmp =
     archetype && contexts.length >= 2
@@ -65,6 +68,11 @@ export default async function ComparePage(props: { searchParams: Promise<Record<
         initialIdea={archetype?.id ?? ''}
       />
 
+      {mixed ? (
+        <Notice tone="demo" title="Ekonomitë DEMO nuk krahasohen me vende reale" className="mt-4">
+          Zgjidhni vetëm vende DEMO (për të provuar aplikacionin) ose vetëm vende reale.
+        </Notice>
+      ) : null}
       <Notice tone="info" title="Regjistrimi, operimi dhe klientët janë tri vende të ndryshme" className="mt-4">
         Vendi ku regjistrohet biznesi, vendi ku operon dhe vendi ku janë klientët mund të ndryshojnë. Mos vendosni zhvendosje ose regjistrim ndërkombëtar vetëm nga një tregues tatimor: verifikoni rezidencën, të drejtën e punës, pagesat dhe operimin me burime zyrtare.
       </Notice>

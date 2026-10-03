@@ -77,7 +77,7 @@ describe('runAssistant without an API key (deterministic answers)', () => {
     const byLabel = new Map(reply.calculations?.map((c) => [c.labelSq, c]));
     expect(byLabel.get('Të ardhurat totale')).toMatchObject({ before: before.totals.revenue, after: after.totals.revenue, scenario: 'baze', currency: 'USD' });
     expect(byLabel.get('Rezultati operativ total')).toMatchObject({ before: before.totals.operatingResult, after: after.totals.operatingResult });
-    expect(byLabel.get('Arka më e ulët')).toMatchObject({ before: before.minCashBalance, after: after.minCashBalance });
+    expect(byLabel.get('Gjendja më e ulët e parasë')).toMatchObject({ before: before.minCashBalance, after: after.minCashBalance });
     expect(byLabel.get('Kapitali i nevojshëm')).toMatchObject({ before: before.capital.totalRequired, after: after.capital.totalRequired });
     expect(reply.replySq).toContain('kostot fikse mujore +15%');
     expect(reply.citations).toEqual([]);

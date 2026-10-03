@@ -17,13 +17,15 @@ const SHORT: Record<string, string> = {
 /** Bottom tab bar for phones with a "Më shumë" sheet listing every section. */
 export function MobileNav() {
   const pathname = usePathname() ?? '/';
-  const [open, setOpen] = useState(false);
+  // The sheet belongs to the page it was opened on, so navigating closes it without an effect.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
+  const setOpen = (value: boolean) => setOpenOn(value ? pathname : null);
   const primary = NAV_ITEMS.filter((i) => MOBILE_PRIMARY.includes(i.href));
 
-  useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpenOn(null);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);

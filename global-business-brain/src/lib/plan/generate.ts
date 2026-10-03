@@ -370,7 +370,9 @@ function phaseBudget(c: Ctx, id: PhaseId, currency: CurrencyCode): PlanPhase['bu
     labels.length > 0
       ? `Supozim nga modeli financiar (investimi fillestar): ${labels.join(', ')}. ${replaceWith}`
       : 'Modeli nuk ka zëra të aktivizuar për këtë fazë; verifikoni nëse ka kosto reale.';
-  return { amount, currency, basisSq };
+  const trialNote =
+    id === 'p50_60' && amount > 0 ? ' Blini vetëm pjesën që duhet për provën; pjesën tjetër pas kriterit të vazhdimit të fazës 60–70.' : '';
+  return { amount, currency, basisSq: `${basisSq}${trialNote}` };
 }
 
 function dependenciesOf(index: number): PhaseId[] {

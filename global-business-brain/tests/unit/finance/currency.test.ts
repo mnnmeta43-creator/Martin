@@ -161,7 +161,7 @@ describe('convertInputs', () => {
     expect(out.unitsPerCustomerPerMonth).toBe(inputs.unitsPerCustomerPerMonth);
     expect(out.scenarios).toEqual(inputs.scenarios);
     for (const l of [...out.startupCosts, ...out.monthlyFixedCosts]) {
-      expect(l.sourceNoteSq).toContain('Konvertuar nga USD në EUR me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (ecb-frankfurter).');
+      expect(l.sourceNoteSq).toContain('Konvertuar nga USD në EUR me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (kurset referuese të BQE-së).');
     }
     expect(r.conversion.rate).toBe(0.5);
     expect(inputs.currency).toBe('USD'); // original untouched

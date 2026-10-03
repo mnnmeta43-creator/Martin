@@ -47,7 +47,7 @@ export default async function SettingsPage() {
             <li>Projektet dhe profili juaj janë të izoluara: asnjë përdorues tjetër nuk mund t’i shohë.</li>
             <li>Aplikacioni nuk kryen asnjë regjistrim biznesi, pagesë, blerje apo veprim të jashtëm në emrin tuaj.</li>
             <li>Kopjet offline ruhen vetëm në këtë pajisje dhe fshihen kur dilni nga llogaria.</li>
-            <li>Modaliteti i të dhënave: {viewer.demoMode ? 'DEMO (ekonomi fiktive aktive)' : 'LIVE'}.</li>
+            <li>Modaliteti i të dhënave: {viewer.demoMode ? 'DEMO (ekonomi fiktive aktive)' : 'Të dhëna reale nga burimet e regjistruara (jo “live”)'}.</li>
           </ul>
         </Card>
         <Card>

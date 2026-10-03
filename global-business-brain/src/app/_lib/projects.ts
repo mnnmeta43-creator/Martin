@@ -22,6 +22,8 @@ import { computeProgress } from '@/lib/plan/progress';
 import { getCountryDataContext } from '@/lib/data/context';
 import { getCountry } from '@/lib/data/countries';
 import { getSource } from '@/lib/data/sources/registry';
+import { getIndicator } from '@/lib/data/indicators';
+import { formatIndicatorValue } from '@/lib/finance/format';
 import type { Store } from '@/lib/server/store/types';
 import { buildInputsWithFallback } from './ideas';
 import type { Citation } from '@/lib/domain/types';
@@ -73,12 +75,14 @@ export async function createProjectFromIdea(
     inputs = currencyFallbackSq ? { ...built.inputs, assumptionsNotesSq: [currencyFallbackSq, ...built.inputs.assumptionsNotesSq] } : built.inputs;
   }
   const base = projectScenario(inputs, 'baze');
-  const plan = generatePlan({ archetype, countryCode: country.code, city: args.city ?? profile.targetCity ?? null, inputs, projection: base });
+  // The profile's target city belongs to the target markets only; never attach it to another country.
+  const city = args.city ?? (profile.targetCountries.some((c) => c.toUpperCase() === country.code) ? (profile.targetCity ?? null) : null);
+  const plan = generatePlan({ archetype, countryCode: country.code, city, inputs, projection: base });
   return store.projects.create(userId, {
     title: args.title?.trim() || `${archetype.nameSq} — ${country.nameSq}`,
     archetypeId: archetype.id,
     countryCode: country.code,
-    city: args.city ?? profile.targetCity ?? null,
+    city,
     registrationCountry: args.registrationCountry ?? null,
     customerCountries: args.customerCountries?.length ? args.customerCountries : [country.code],
     financialInputs: inputs,
@@ -110,7 +114,13 @@ export function snapshotCitations(project: Project): Citation[] {
     sourceLastUpdated: o.sourceLastUpdated ?? null,
     isDemo: o.isDemo,
     isProjection: o.isProjection,
+    noteSq: snapshotNoteSq(o),
   }));
+}
+
+function snapshotNoteSq(o: Observation): string {
+  const def = getIndicator(o.indicatorCode);
+  return def ? `${def.nameSq}: ${formatIndicatorValue(o.value, def)}` : o.indicatorCode;
 }
 
 export async function loadProjectView(store: Store, userId: string, projectId: string, demoMode: boolean) {

@@ -37,6 +37,8 @@ export interface DetailedProfileFit {
 }
 
 /** Prefix shared by every team blocker; UI and tests may rely on it. */
+/** Prefix of fit lines that describe a legal requirement rather than a profile mismatch. */
+export const REGULATORY_PREFIX_SQ = 'Kërkesë rregullatore (jo mospërputhje me profilin): ';
 export const TEAM_BLOCKER_PREFIX_SQ = 'Kërkon ekip/partner; profili juaj: vetëm';
 
 /**
@@ -193,18 +195,19 @@ function checkCapital(a: BusinessArchetype, p: UserProfile, cap: FitCapitalInput
     }
   }
   if (own === 0) {
-    out.mismatches.push(`Kapitali juaj është 0: për momentin mund të testoni vetëm kërkesën. Prova pa kapital: ${a.zeroCapitalTestSq}`);
+    out.mismatches.unshift(`Kapitali juaj është 0: për momentin mund të testoni vetëm kërkesën. Prova pa kapital: ${a.zeroCapitalTestSq}`);
   }
   return gap;
 }
 
 function checkRegulationAndRisk(a: BusinessArchetype, p: UserProfile, cap: FitCapitalInput, out: Collector): void {
-  if (a.regulated) {
+  if (a.regulated || a.licensedProfessionalsSq.length > 0) {
     const pros =
       a.licensedProfessionalsSq.length > 0
-        ? ` Nevojiten profesionistë të licencuar: ${listSq(a.licensedProfessionalsSq)}.`
+        ? ` Nevojiten profesionistë të licencuar për: ${listSq(a.licensedProfessionalsSq)}.`
         : ' Verifikoni nëse nevojiten profesionistë të licencuar.';
-    out.mismatches.push(`Veprimtari e rregulluar: nevojiten leje ose licenca — Kërkon verifikim lokal.${pros}`);
+    const what = a.regulated ? 'nevojiten leje ose licenca — Kërkon verifikim lokal.' : 'disa punë kërkojnë profesionistë të licencuar — Kërkon verifikim lokal.';
+    out.mismatches.push(`Kërkesë rregullatore (jo mospërputhje me profilin): ${what}${pros}`);
   }
   if (p.riskTolerance !== 'e_ulet') return;
   const heavy = isCapitalHeavy(cap);

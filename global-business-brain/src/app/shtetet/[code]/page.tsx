@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ECONOMY_KIND_LABELS } from '@/lib/domain/taxonomy';
 import { getCountry } from '@/lib/data/countries';
 import { getIndicator } from '@/lib/data/indicators';
+import { getSource } from '@/lib/data/sources/registry';
 import { buildMacroAnalysis } from '@/lib/analysis/macro';
 import { formatDateTime } from '@/lib/finance/format';
 import { IndicatorCard } from '@/components/countries/IndicatorCard';
@@ -73,7 +74,7 @@ export default async function CountryPage(props: Props) {
           <ul className="list-disc space-y-0.5 pl-5">
             {ctx.sourceErrors.slice(0, 5).map((e) => (
               <li key={`${e.sourceId}-${e.scope}-${e.startedAt}`}>
-                {e.sourceId} · {e.scope} · {formatDateTime(e.startedAt)}: {e.messageSq}
+                {getSource(e.sourceId)?.nameSq ?? e.sourceId} · {formatDateTime(e.startedAt)}: {e.messageSq}
               </li>
             ))}
           </ul>
@@ -84,7 +85,7 @@ export default async function CountryPage(props: Props) {
       <Card className="mb-4">
         <CardHeader
           title="Mbulimi i të dhënave"
-          subtitle={`${ctx.coverage.availableCount} nga ${ctx.coverage.totalTracked} tregues kanë vlera · ${ctx.coverage.freshCount} të freskëta · rifreskimi i fundit: ${ctx.lastRefreshAt ? formatDateTime(ctx.lastRefreshAt) : 'asnjëherë'}`}
+          subtitle={`${ctx.coverage.availableCount} nga ${ctx.coverage.totalTracked} tregues kanë vlera · ${ctx.coverage.freshCount} të freskët · rifreskimi i fundit: ${ctx.lastRefreshAt ? formatDateTime(ctx.lastRefreshAt) : 'asnjëherë'}`}
         />
         <p className="text-sm text-muted">{ctx.coverage.noteSq}</p>
         {ctx.coverage.missingIndicators.length > 0 ? (

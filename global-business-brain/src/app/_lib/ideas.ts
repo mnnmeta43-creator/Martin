@@ -72,7 +72,7 @@ export async function loadIdeaView(viewer: Viewer, archetypeId: string, countryC
     usingPlaceholderProfile: !viewer.profile,
     sixSteps: explainInSixSteps(archetype, rec),
     kit: buildValidationKit(archetype, rec),
-    location: buildLocationAnalysis(archetype, profile, countryCode, profile.targetCity ?? null),
+    location: buildLocationAnalysis(archetype, profile, countryCode, rec.city ?? null),
     inputs: built.ok ? built.inputs : null,
     projections: built.ok ? projectAllScenarios(built.inputs) : null,
     inputsErrorSq: built.ok ? null : built.reasonSq,

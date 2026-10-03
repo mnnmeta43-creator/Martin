@@ -164,7 +164,8 @@ describe('buildWhyWorkClaims', () => {
     const macro = buildMacroClaims(IDEAS_ARCHETYPE, synthetic);
     const chain = buildWhyWorkClaims(IDEAS_ARCHETYPE, synthetic, macro, baseProjection(), 'EUR');
     expect(chain.map((c) => c.id.split(':').pop())).toEqual(['ndryshimi', 'problemi', 'klienti', 'oferta', 'arsyeja', 'fitimi']);
-    expect(chain[0].label).toBe('mbeshtetet_nga_te_dhenat');
+    // A matching macro indicator is context, not proof of the narrative: always a hypothesis.
+    expect(chain[0].label).toBe('hipoteze');
     expect(chain[2].label).toBe('duhet_testuar');
     expect(chain[4].label).toBe('duhet_testuar');
     expect(chain[5].kind).toBe('supozim');

@@ -124,7 +124,7 @@ function verificationList(a: BusinessArchetype, shape: Shape, country: Place): s
     `Nëse jo-rezidentët mund të regjistrojnë biznes në ${operatingCountrySq(country)} dhe me cilat kushte (adresë vendore, përfaqësues, numër identifikimi tatimor). ${VERIFY}`,
     `Rezidenca juaj tatimore: ku tatoheni ju personalisht dhe ku tatohet biznesi, sidomos nëse jetoni në një vend dhe regjistroheni ose keni klientë në një tjetër. Verifikojeni me administratën tatimore ose me një këshilltar tatimor të licencuar. ${VERIFY}`,
     `Hapja e llogarisë bankare të biznesit dhe disponueshmëria e pagesave me kartë ose online për biznesin tuaj në ${operatingCountrySq(country)} — jo çdo shërbim pagesash funksionon në çdo vend. ${VERIFY}`,
-    a.regulated
+    a.regulated || a.licensedProfessionalsSq.length > 0
       ? `Licencat dhe lejet e aktivitetit për «${a.nameSq}»${a.licensedProfessionalsSq.length > 0 ? `, si dhe profesionistët e licencuar që duhen (${a.licensedProfessionalsSq.join(', ')})` : ''}. ${VERIFY}`
       : `Kodi i veprimtarisë, lejet e bashkisë dhe çdo licencë që mund të kërkohet për «${a.nameSq}». ${VERIFY}`,
     ...a.regulationNotesSq.map((n) => (/verifik/i.test(n) ? n : `${n} ${VERIFY}`)),

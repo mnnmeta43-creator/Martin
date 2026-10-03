@@ -63,7 +63,7 @@ export default async function SourcesPage() {
           <li>Rifreskimi bëhet në server: ruhen vlera, periudha, njësia, burimi me lidhjen, data e publikimit kur ofrohet dhe data e marrjes.</li>
           <li>Rifreskimi automatik kërkon një planifikues që thërret <code className="font-mono text-ink">POST /api/cron/refresh</code> me <code className="font-mono text-ink">CRON_SECRET</code>. Pa planifikues, nuk ka rifreskim pasi mbyllet aplikacioni.</li>
           <li>Rifreskim manual: <code className="font-mono text-ink">npm run data:refresh</code> në server.</li>
-          <li>Çdo burim ka ritmin e vet (p.sh. kurset ditore, treguesit vjetorë javore); kërkesat ndahen në kohë dhe përsëriten me pritje kur burimi kthen gabim.</li>
+          <li>Çdo burim ka ritmin e vet (p.sh. kurset e këmbimit kontrollohen çdo ditë, treguesit vjetorë çdo javë); kërkesat ndahen në kohë dhe përsëriten me pritje kur burimi kthen gabim.</li>
         </ul>
       </Card>
 
@@ -146,7 +146,7 @@ export default async function SourcesPage() {
           rows={logs}
           rowKey={(l) => `${l.sourceId}-${l.scope}`}
           columns={[
-            { key: 'src', header: 'Burimi', cell: (l) => l.sourceId },
+            { key: 'src', header: 'Burimi', cell: (l) => SOURCES.find((s) => s.id === l.sourceId)?.nameSq ?? l.sourceId },
             { key: 'scope', header: 'Fusha', cell: (l) => <span className="font-mono text-xs">{l.scope}</span> },
             { key: 'st', header: 'Statusi', cell: (l) => <Badge tone={LOG_TONE[l.status] ?? 'neutral'}>{LOG_LABEL[l.status] ?? l.status}</Badge> },
             { key: 'at', header: 'Koha', cell: (l) => formatDateTime(l.finishedAt ?? l.startedAt) },
@@ -160,7 +160,7 @@ export default async function SourcesPage() {
         <CardHeader title="Të dhënat demonstrative" />
         <p className="text-sm text-muted">
           Me <code className="font-mono text-ink">DATA_MODE=demo</code> aktivizohen tri ekonomi fiktive (ZZA, ZZB, ZZC) me të dhëna të sajuara, për të provuar rrjedhën e plotë pa qasje në burime. Ato nuk ruhen në tabelat e të dhënave reale, shënohen DEMO kudo dhe nuk përdoren për rekomandime reale. Modaliteti aktual:{' '}
-          <strong className="text-ink">{viewer.demoMode ? 'DEMO' : 'LIVE (vetëm të dhëna reale të sinkronizuara)'}</strong>.
+          <strong className="text-ink">{viewer.demoMode ? 'DEMO' : 'Të dhëna reale (vetëm vlerat e sinkronizuara dhe të ruajtura, me periudhën e tyre)'}</strong>.
         </p>
       </Card>
     </>

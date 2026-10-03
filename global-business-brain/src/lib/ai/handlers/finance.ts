@@ -35,7 +35,7 @@ interface MetricDef {
 export const SCENARIO_METRICS: readonly MetricDef[] = [
   { key: 'totalRevenue', labelSq: 'Të ardhurat totale', kind: 'money', get: (p) => p.totals.revenue },
   { key: 'operatingResult', labelSq: 'Rezultati operativ total', kind: 'money', get: (p) => p.totals.operatingResult },
-  { key: 'minCash', labelSq: 'Arka më e ulët', kind: 'money', get: (p) => p.minCashBalance },
+  { key: 'minCash', labelSq: 'Gjendja më e ulët e parasë', kind: 'money', get: (p) => p.minCashBalance },
   { key: 'capitalRequired', labelSq: 'Kapitali i nevojshëm', kind: 'money', get: (p) => p.capital.totalRequired },
   { key: 'breakEvenUnits', labelSq: 'Pika e barazimit (njësi në muaj)', kind: 'units', get: (p) => p.unitEconomics.breakEvenUnitsPerMonth },
   { key: 'paybackMonth', labelSq: 'Muaji kur rikuperohet investimi fillestar', kind: 'month', get: (p) => p.payback.recoveredInMonth },

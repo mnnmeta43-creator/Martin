@@ -189,7 +189,7 @@ describe('run_financial_scenario', () => {
     expect(data.paybackStatementSq).toEqual({ before: before.payback.statementSq, after: after.payback.statementSq });
     expect(data.shockSq).toBe('kostot fikse mujore +25%, çmimi për njësi -10%, vonesa e arkëtimit nga klientët +30 ditë');
     // Only money metrics become calculations, all for the requested scenario and currency.
-    expect(execution.calculations.map((c) => c.labelSq)).toEqual(['Të ardhurat totale', 'Rezultati operativ total', 'Arka më e ulët', 'Kapitali i nevojshëm']);
+    expect(execution.calculations.map((c) => c.labelSq)).toEqual(['Të ardhurat totale', 'Rezultati operativ total', 'Gjendja më e ulët e parasë', 'Kapitali i nevojshëm']);
     for (const c of execution.calculations) expect(c).toMatchObject({ scenario: 'konservator', currency: 'USD' });
     // The project itself is never changed.
     expect(ctx.project!.financialInputs).toEqual(inputs);
@@ -199,7 +199,7 @@ describe('run_financial_scenario', () => {
     const { execution } = await run('run_financial_scenario', { shock: { variableCostPct: 20 } });
     const after = projectScenario(applyShock(makeInputs(), { variableCostPct: 20 }), 'baze');
     expect((execution.data as AnyData).scenario).toBe('baze');
-    expect(execution.calculations.find((c) => c.labelSq === 'Arka më e ulët')?.after).toBe(after.minCashBalance);
+    expect(execution.calculations.find((c) => c.labelSq === 'Gjendja më e ulët e parasë')?.after).toBe(after.minCashBalance);
   });
 });
 

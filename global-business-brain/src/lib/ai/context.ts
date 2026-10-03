@@ -126,7 +126,7 @@ export function recommendationFor(ctx: AssistantContext): IdeaRecommendation | n
   const profile = effectiveProfile(ctx);
   const rec =
     ctx.project && ctx.archetype && ctx.countryCtx && profile
-      ? evaluateIdea(ctx.archetype, profile, ctx.countryCtx, { weights: ctx.project.scoreWeights, now: ctx.now })
+      ? evaluateIdea(ctx.archetype, profile, ctx.countryCtx, { weights: ctx.project.scoreWeights, now: ctx.now, evidence: ctx.evidence })
       : null;
   ctx.memo.set('rec', rec);
   return rec;

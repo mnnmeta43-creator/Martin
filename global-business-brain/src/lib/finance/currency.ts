@@ -7,7 +7,7 @@
  * annual average, demo, triangulated) travels with the result as an Albanian warning.
  */
 import type { CurrencyCode, FinancialInputs, FxConversion, FxRate, MoneyLine } from '@/lib/domain/types';
-import { currencyDisplayDigits, formatIsoDateSq, numberFormat } from '@/lib/finance/locale';
+import { currencyDisplayDigits, formatIsoDateSq, numberFormat, sourceNameSq } from '@/lib/finance/locale';
 
 export interface ConvertOptions {
   /** Reference "today" for staleness checks; without it no staleness warning is produced. */
@@ -197,7 +197,7 @@ export function rateTextSq(from: CurrencyCode, to: CurrencyCode, rate: number): 
 /** Sentence appended to every converted line so the provenance of the number stays visible. */
 export function conversionNoteSq(from: CurrencyCode, to: CurrencyCode, conversion: FxConversionOk): string {
   const via = conversion.viaCurrency ? `, përmes ${conversion.viaCurrency}` : '';
-  return `Konvertuar nga ${normalizeCode(from)} në ${normalizeCode(to)} me kursin ${rateTextSq(from, to, conversion.rate)} të datës ${formatIsoDateSq(conversion.rateDate)} (${conversion.sourceId}${via}).`;
+  return `Konvertuar nga ${normalizeCode(from)} në ${normalizeCode(to)} me kursin ${rateTextSq(from, to, conversion.rate)} të datës ${formatIsoDateSq(conversion.rateDate)} (${sourceNameSq(conversion.sourceId)}${via}).`;
 }
 
 function convertLine(line: MoneyLine, rate: number, note: string): MoneyLine {

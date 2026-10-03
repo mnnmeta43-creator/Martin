@@ -184,3 +184,19 @@ export function formatIsoDateSq(iso: string | null | undefined): string {
   const parts = parseIsoDateParts(iso);
   return parts ? formatDatePartsSq(parts) : MISSING_SQ;
 }
+
+const SOURCE_NAMES_SQ: Record<string, string> = {
+  'ecb-frankfurter': 'kurset referuese të BQE-së',
+  'worldbank-wdi': 'mesatarja vjetore e Bankës Botërore',
+  manual: 'vendosur nga ju',
+  demo: 'kurs DEMO, fiktiv',
+  'e-njejta-monedhe': 'e njëjta monedhë',
+};
+
+/** Human-readable name of an FX source id (triangulated ids are joined with "+"). */
+export function sourceNameSq(id: string): string {
+  return id
+    .split('+')
+    .map((part) => SOURCE_NAMES_SQ[part] ?? part)
+    .join(' + ');
+}

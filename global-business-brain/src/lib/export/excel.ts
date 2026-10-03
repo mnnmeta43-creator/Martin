@@ -266,8 +266,8 @@ function summaryScenarioTable(ws: ExcelJS.Worksheet, start: number, ctx: Ctx): n
     { label: 'Investimi fillestar', pick: (p) => p.capital.startupTotal, fmt: ctx.fmt.money },
     { label: 'Kapitali i nevojshëm', pick: (p) => p.capital.totalRequired, fmt: ctx.fmt.money },
     { label: 'Mungesa e kapitalit', pick: (p) => p.capital.gap, fmt: ctx.fmt.money },
-    { label: 'Paraja më e ulët', pick: (p) => p.minCashBalance, fmt: ctx.fmt.money },
-    { label: 'Muaji me paranë më të ulët', pick: (p) => minCashMonthSq(p.minCashMonth), fmt: 'General' },
+    { label: 'Gjendja më e ulët e parasë', pick: (p) => p.minCashBalance, fmt: ctx.fmt.money },
+    { label: 'Muaji i gjendjes më të ulët të parasë', pick: (p) => minCashMonthSq(p.minCashMonth), fmt: 'General' },
     { label: 'Rikuperimi i investimit (muaji, vlerësim)', pick: paybackCellSq, fmt: ctx.fmt.int },
   ];
   let r = start + 2;
@@ -687,8 +687,8 @@ function buildCapitalSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
     'Kapitali i nevojshëm = investimi + deficiti + rezerva',
     'Kapitali vetjak',
     'Mungesa e kapitalit = max(0, i nevojshëm − vetjak)',
-    'Paraja më e ulët gjatë horizontit',
-    'Muaji me paranë më të ulët',
+    'Gjendja më e ulët e parasë gjatë horizontit',
+    'Muaji i gjendjes më të ulët të parasë',
     'Rikuperimi i investimit (muaji, vlerësim)',
   ];
   labels.forEach((label, i) => {

@@ -19,10 +19,10 @@ interface Turn {
 const SUGGESTIONS = [
   'Pse kjo ide ka kuptim këtu?',
   'Ma përshtat me kapital më të vogël.',
-  'Krahasoje me një shtet tjetër, p.sh. Kosova.',
+  'Krahasoje me një shtet tjetër, p.sh. me Kosovën.',
   'Çfarë duhet të verifikoj sot?',
   'Çfarë ndodh nëse kostot rriten 20%?',
-  'Cili supozim është më i dobëti?',
+  'Cili është supozimi më i dobët?',
 ];
 
 /** Renders "[c1]" markers as superscript references to the citation list below the answer. */

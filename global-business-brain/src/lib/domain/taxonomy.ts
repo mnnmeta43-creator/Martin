@@ -175,7 +175,7 @@ export const SCENARIO_LABELS: Record<ScenarioId, string> = {
 };
 
 export const SCORE_DIMENSION_LABELS: Record<ScoreDimensionId, string> = {
-  kerkesa: 'Kërkesa e dokumentuar',
+  kerkesa: 'Sinjalet e kërkesës (makro + prova nga klientët)',
   kapitali: 'Përputhja me kapitalin',
   aftesite: 'Aftësitë dhe përvoja',
   veshtiresia: 'Lehtësia e nisjes',

@@ -35,7 +35,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
   const cur = project.financialInputs.currency;
   const base = projections.baze;
   const ctx = archetype && viewer.profile ? await loadContext(viewer, project.countryCode) : null;
-  const rec = archetype && viewer.profile && ctx ? evaluateIdea(archetype, viewer.profile, ctx, { weights: project.scoreWeights, now: viewer.now }) : null;
+  const rec = archetype && viewer.profile && ctx ? evaluateIdea(archetype, viewer.profile, ctx, { weights: project.scoreWeights, now: viewer.now, evidence: view.evidence }) : null;
   const next = tasksForHorizon(view.tasks.filter((t) => t.status !== 'perfunduar' && t.status !== 'anashkaluar'), 30).slice(0, 6);
 
   const keyNumbers = [
@@ -114,7 +114,10 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
           ) : null}
         </Card>
         <Card>
-          <CardHeader title="Pikëzimi i përshtatjes" subtitle="Me peshat e ruajtura në projekt; ndryshojini dhe ruajini." />
+          <CardHeader
+            title="Pikëzimi i përshtatjes"
+            subtitle="Me të dhënat e sotme, supozimet e bibliotekës dhe provat që keni regjistruar; peshat ruhen në projekt."
+          />
           {rec ? (
             <ScoreBreakdown dimensions={rec.score.dimensions} initialWeights={project.scoreWeights} projectId={project.id} noteSq={rec.score.noteSq} />
           ) : (

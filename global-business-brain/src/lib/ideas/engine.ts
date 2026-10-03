@@ -197,6 +197,13 @@ export function evaluateIdeaDetailed(a: BusinessArchetype, profile: UserProfile,
   }
 
   const { fit, blockers } = assessProfileFitDetailed(a, profile, { capitalRange, ownCapital: profile.capital.amount });
+  const code = ctx.country.code.toUpperCase();
+  if (!ctx.isDemo && !profile.operableCountries.some((c) => c.toUpperCase() === code) && (a.modes.includes('fizik') || a.modes.includes('kombinuar'))) {
+    // Residence, operable countries and target markets are different answers; never assume the right to operate.
+    fit.mismatchesSq.unshift(
+      `Nuk keni deklaruar se mund të operoni në ${ctx.country.nameSq}: verifikoni të drejtën e qëndrimit, punës dhe regjistrimit para çdo hapi (Kërkon verifikim lokal).`,
+    );
+  }
   const macro = buildMacroClaims(a, ctx);
   const whyWork = buildWhyWorkClaims(a, ctx, macro, projection, currency);
   const whyFail = buildWhyFailClaims(a, ctx, projection, fit, currency);

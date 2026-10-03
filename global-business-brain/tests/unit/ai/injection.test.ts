@@ -106,7 +106,9 @@ describe('untrusted project text in the Claude path', () => {
   });
 
   it('does not change which tools run or what they compute', async () => {
-    const clean = await ask(standardStore());
+    // Same evidence record (type, quantity) as the injected store, so only the user's text differs —
+    // recorded interviews legitimately count toward the demand score.
+    const clean = await ask(standardStore({ evidence: [evidenceEntry({})] }));
     const injected = await ask(injectedStore());
     // Only the tools the model asked for ran; adapt_to_capital (requested by the injection) did not.
     expect(injected.reply.toolCalls).toEqual([

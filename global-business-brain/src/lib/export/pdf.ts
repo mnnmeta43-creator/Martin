@@ -409,7 +409,7 @@ function keyNumbers({ p, input, money }: Section): void {
   keyValue(p, 'Mungesa e kapitalit', money(base.capital.gap));
   keyValue(p, 'Pika e barazimit në muaj (supozim)', breakEvenSq(base.unitEconomics, inputs.unitLabelSq));
   keyValue(p, 'Rikuperimi i investimit (vlerësim, jo datë e garantuar)', base.payback.statementSq);
-  keyValue(p, 'Paraja më e ulët (supozim)', `${money(base.minCashBalance)} — ${minCashMonthSq(base.minCashMonth)}`);
+  keyValue(p, 'Gjendja më e ulët e parasë (supozim)', `${money(base.minCashBalance)} — ${minCashMonthSq(base.minCashMonth)}`);
   keyValue(p, 'Paga e pronarit', ownerSalaryStatementSq(inputs, (v) => money(v)));
   keyValue(p, 'Tatimi', taxStatementSq(inputs));
   para(p, NO_FINANCING_SQ, { size: 9, color: COLOR.muted, gapAfter: 8 });
@@ -424,7 +424,7 @@ function keyNumbers({ p, input, money }: Section): void {
       pick(`Të ardhurat gjithsej (${inputs.horizonMonths} muaj)`, (r) => money(r.totals.revenue)),
       pick('Rezultati neto gjithsej', (r) => money(r.totals.netResult)),
       pick('Kapitali i nevojshëm', (r) => money(r.capital.totalRequired)),
-      pick('Paraja më e ulët', (r) => money(r.minCashBalance)),
+      pick('Gjendja më e ulët e parasë', (r) => money(r.minCashBalance)),
       pick('Rikuperimi (muaji)', (r) => (r.payback.recoveredInMonth === null ? 'jo brenda horizontit' : `muaji ${r.payback.recoveredInMonth}`)),
     ],
   );
@@ -535,7 +535,7 @@ function assumptionsSection({ p, input, money }: Section): void {
   const { archetype } = input;
   p.doc.addPage();
   heading(p, 'Supozimet', 20);
-  para(p, 'Vlerat e futura në modelin financiar. Janë supozime ose vlera tuajat, jo çmime të verifikuara.', { size: 9, color: COLOR.muted, gapAfter: 8 });
+  para(p, 'Vlerat e futura në modelin financiar. Janë supozime ose vlera të vendosura nga ju, jo çmime të verifikuara.', { size: 9, color: COLOR.muted, gapAfter: 8 });
   keyValue(p, 'Monedha', inputs.currency);
   keyValue(p, 'Njësia e shitjes', inputs.unitLabelSq);
   keyValue(p, 'Çmimi për njësi', money(inputs.pricePerUnit));

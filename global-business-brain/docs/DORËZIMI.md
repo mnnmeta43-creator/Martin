@@ -34,11 +34,18 @@ buxhet i redaktueshëm → plan 0–100 → ruajtje projekti**, plus:
   dështimin e burimeve (riprovim, ndërprerës, ruajtja e të dhënave të vjetra), ruajtjen dhe izolimin e
   projekteve, gjurmueshmërinë e pretendimeve te burimet, pikëzimin, planin, eksportet, asistentin
   (me klient të simuluar dhe tentativa "prompt injection").
-- **PostgreSQL real 16:** 29 teste integrimi (kontrata e ruajtjes, izolimi, migrimet e njëkohshme) — kaluan.
+- **PostgreSQL real 16:** 31 teste integrimi (kontrata e ruajtjes, izolimi, migrimet e njëkohshme,
+  fshirja e vizitorëve të vjetër, kufiri i bisedave) — kaluan.
 - **End-to-end (Playwright) në telefon (Pixel 7) dhe kompjuter:** rrjedha e plotë, izolimi (një
   përdorues tjetër merr 404), eksportet PDF/Excel, asistenti pa çelës, faqja offline, manifesti PWA,
   katalogu, vendi pa të dhëna, burimet — dhe kontrolli që asnjë faqe nuk ka scroll horizontal.
 - **Rishikim kundërshtues i motorit financiar:** 26 probleme të verifikuara u rregulluan me teste regresioni.
+- **Rishikim sigurie:** asnjë problem kritik; të gjitha gjetjet e larta, të mesme dhe të ulëta u rregulluan
+  (kufizime sipas IP-së, kufi për email në hyrje, kufi ditor për asistentin, IP e besueshme e klientit,
+  kuota ruajtjeje, fshirja e vizitorëve pas 30 ditësh, HSTS, service worker pa faqe personale).
+- **Rishikim ndershmërie (specifikimi):** treguesit makro trajtohen si kontekst, jo provë e ndryshimit
+  (gjithmonë "hipotezë"); kërkesa pikëzohet nga makro + provat nga klientët; kërkesat ligjore ndahen nga
+  mospërputhjet e profilit; profesionistët e licencuar shfaqen kudo ku duhen; emrat e burimeve në shqip.
 
 ## 3. Çfarë pret konfigurim ose verifikim
 
@@ -61,4 +68,16 @@ buxhet i redaktueshëm → plan 0–100 → ruajtje projekti**, plus:
 
 ## 5. Numrat e verifikimit të fundit
 
-Plotësohen në fund të punës (shihni mesazhin përfundimtar).
+Verifikimi i fundit (3 tetor 2026), në ndërtim prodhimi:
+
+| Kontrolli | Rezultati |
+|---|---|
+| `npx tsc --noEmit` | pa gabime |
+| `npx eslint src tests e2e` | 0 gabime (3 paralajmërime në teste) |
+| `npx vitest run` | 870 kaluan, 31 të anashkaluara (testet e PostgreSQL pa `TEST_DATABASE_URL`) |
+| `TEST_DATABASE_URL=… npx vitest run` (PostgreSQL 16 real) | 901 / 901 kaluan |
+| `npm run build` | sukses |
+| Playwright e2e (Pixel 7 + desktop) kundër `next start` | 16 / 16 kaluan |
+
+Lidhja live me World Bank, IMF dhe ECB **nuk** është verifikuar nga ky mjedis (hostet ishin të bllokuara);
+verifikohet me rifreskimin e parë pas publikimit.

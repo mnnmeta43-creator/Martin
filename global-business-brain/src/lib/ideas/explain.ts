@@ -5,6 +5,7 @@
  * (capital ranges, fit) or from a deterministic projection, and every number is labelled as an
  * assumption. Nothing here claims that the idea will succeed.
  */
+import { macroClaimStance } from '@/lib/ideas/claims';
 import type { BusinessArchetype, Claim, IdeaRecommendation, MoneyRange, ProjectionResult, SixSteps } from '@/lib/domain/types';
 import { BUSINESS_MODE_LABELS, MARKET_SCOPE_LABELS, skillLabel } from '@/lib/domain/taxonomy';
 import { formatMoney, formatNumber } from '@/lib/finance/format';
@@ -59,15 +60,15 @@ function quotedFacts(macro: Claim[]): string[] {
 }
 
 function evidenceSentence(rec: IdeaRecommendation): string {
-  const backed = rec.claims.whyWork.some((c) => c.label === 'mbeshtetet_nga_te_dhenat' && c.citations.length > 0);
+  const backed = rec.claims.macro.some((c) => macroClaimStance(c) === 'mbeshtet');
   const facts = quotedFacts(rec.claims.macro);
   const parts: string[] = [];
   if (rec.isDemoData) parts.push('[DEMO] Të dhënat e këtij vendi janë fiktive dhe shërbejnë vetëm për të provuar aplikacionin.');
   if (facts.length > 0) parts.push(`Të dhëna të disponueshme: ${facts.join(' ')}`);
   parts.push(
     backed
-      ? 'Të paktën një tregues makro e mbështet ndryshimin që e bën idenë të mundshme, por kjo nuk provon se klientët do të paguajnë.'
-      : 'Asnjë tregues makro nuk e mbështet ende ndryshimin me të dhëna — trajtojeni si hipotezë.',
+      ? 'Të paktën një tregues makro përputhet me ndryshimin (kontekst, jo provë); vetëm klientët që paguajnë e provojnë kërkesën.'
+      : 'Asnjë tregues makro nuk përputhet ende me ndryshimin për këtë vend — trajtojeni si hipotezë.',
   );
   parts.push(`Cilësia e provave: ${EVIDENCE_LEVEL_SQ[rec.evidence.level]}.`);
   return parts.join(' ');
@@ -103,9 +104,10 @@ function whatItRequires(a: BusinessArchetype, rec: IdeaRecommendation | null): s
     TEAM_SQ[a.minTeam],
     a.canStartFromHome ? 'Mund të niset nga shtëpia.' : 'Kërkon ambient pune ose lokal.',
   ];
-  if (a.regulated) {
+  if (a.regulated || a.licensedProfessionalsSq.length > 0) {
     const pros = a.licensedProfessionalsSq.length > 0 ? ` Profesionistë të licencuar: ${joinSq(a.licensedProfessionalsSq)}.` : '';
-    parts.push(`Veprimtari e rregulluar: licencat dhe lejet duhen verifikuar para nisjes (Kërkon verifikim lokal).${pros}`);
+    const what = a.regulated ? 'Veprimtari e rregulluar: licencat dhe lejet duhen verifikuar para nisjes' : 'Disa punë kërkojnë profesionistë të licencuar';
+    parts.push(`${what} (Kërkon verifikim lokal).${pros}`);
   }
   parts.push(capitalSentence(rec));
   if (rec && rec.fit.blockersSq.length > 0) parts.push(`Pengesa sipas profilit tuaj: ${rec.fit.blockersSq.join(' ')}`);
@@ -113,7 +115,7 @@ function whatItRequires(a: BusinessArchetype, rec: IdeaRecommendation | null): s
 }
 
 function howToStart(a: BusinessArchetype): string {
-  return `Nisni pa shpenzuar: ${a.zeroCapitalTestSq} Pastaj testi më i lirë me para reale: ${a.cheapestTestSq} Para çdo blerjeje bëni të paktën 15 intervista me pyetje për sjelljen e kaluar, jo për mendime.`;
+  return `Testoni kërkesën para çdo shpenzimi (kjo nuk e nis biznesin): ${a.zeroCapitalTestSq} Pastaj testi më i lirë me para reale: ${a.cheapestTestSq} Para çdo blerjeje bëni të paktën 15 intervista me pyetje për sjelljen e kaluar, jo për mendime.`;
 }
 
 function breakEvenSentence(projection: ProjectionResult | null | undefined): string | null {

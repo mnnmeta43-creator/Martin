@@ -45,7 +45,7 @@ describe('buildFinancialInputs — conversion', () => {
     expect(line.sourceKind).toBe('supozim');
     expect(line.date).toBe('2026-10-02');
     expect(line.sourceNoteSq).toBe(
-      'Shënim testi për pajisjet. Supozim i përgjithshëm i bibliotekës (2026-10-02), konvertuar nga USD me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (ecb-frankfurter).',
+      'Shënim testi për pajisjet. Supozim i përgjithshëm i bibliotekës (2026-10-02), konvertuar nga USD me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (kurset referuese të BQE-së).',
     );
   });
 
@@ -220,7 +220,7 @@ describe('buildFinancialInputs — range and provenance of price, unit variable 
     // price 10–30 USD and variable 2–6 USD × 0.5
     const note = inputs.assumptionsNotesSq.find((n) => n.startsWith('Çmimi për njësi'));
     expect(plain(note ?? '')).toBe(
-      'Çmimi për njësi (vizitë shërbimi): 10,00 € (diapazoni 5,00 €–15,00 €); kostoja variabël për njësi: 2,00 € (diapazoni 1,00 €–3,00 €). Modeli përdor vlerën bazë; diapazoni tregon sa mund të ndryshojë. Supozim i përgjithshëm i bibliotekës (2026-10-02), konvertuar nga USD me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (ecb-frankfurter). Vlera sintetike testi.',
+      'Çmimi për njësi (vizitë shërbimi): 10,00 € (diapazoni 5,00 €–15,00 €); kostoja variabël për njësi: 2,00 € (diapazoni 1,00 €–3,00 €). Modeli përdor vlerën bazë; diapazoni tregon sa mund të ndryshojë. Supozim i përgjithshëm i bibliotekës (2026-10-02), konvertuar nga USD me kursin 1 USD = 0,5 EUR të datës 1 tetor 2026 (kurset referuese të BQE-së). Vlera sintetike testi.',
     );
   });
 

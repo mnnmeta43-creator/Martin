@@ -300,7 +300,7 @@ const LINK_SEEDS: Record<CountryCode | 'EU', LinkSeed[]> = {
   MKD: [
     ['regjistrim_biznesi', 'Regjistri Qendror i Maqedonisë së Veriut', 'https://www.crm.com.mk'],
     ['statistika', 'Enti Shtetëror i Statistikës i Maqedonisë së Veriut', 'https://www.stat.gov.mk'],
-    ['banka_qendrore', 'Banka qendrore e Maqedonisë së Veriut (NBRM)', 'https://www.nbrm.mk'],
+    ['banka_qendrore', 'Banka Popullore e Republikës së Maqedonisë së Veriut (NBRM)', 'https://www.nbrm.mk'],
     ['tatime', 'Administrata tatimore e Maqedonisë së Veriut (UJP)', 'https://www.ujp.gov.mk'],
   ],
   MNE: [
@@ -324,7 +324,7 @@ const LINK_SEEDS: Record<CountryCode | 'EU', LinkSeed[]> = {
   ],
   GRC: [
     ['portal_qeveritar', 'Portali qeveritar për bizneset në Greqi (Business Portal)', 'https://www.businessportal.gr'],
-    ['statistika', 'Autoriteti Statistikor Helen (ELSTAT)', 'https://www.statistics.gr'],
+    ['statistika', 'Autoriteti Helenik i Statistikave (ELSTAT)', 'https://www.statistics.gr'],
     ['banka_qendrore', 'Banka e Greqisë', 'https://www.bankofgreece.gr'],
   ],
   GBR: [

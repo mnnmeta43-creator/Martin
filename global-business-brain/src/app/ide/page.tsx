@@ -114,7 +114,17 @@ export default async function IdeasPage(props: { searchParams: Promise<Record<st
       ) : null}
       {data && data.ctx.coverage.level === 'e_pamjaftueshme' ? (
         <Notice tone="warn" title="Të dhënat makro për këtë vend janë të pamjaftueshme" className="mb-4">
-          {data.ctx.coverage.noteSq} Idetë vlerësohen kryesisht sipas profilit; dimensioni “kërkesa e dokumentuar” nuk vlerësohet (nuk trajtohet si 0). Kontrolloni <Link href="/burimet">Burimet</Link>.
+          {data.ctx.coverage.noteSq} Idetë vlerësohen kryesisht sipas profilit; dimensioni i sinjaleve të kërkesës nuk vlerësohet (nuk trajtohet si 0). Kontrolloni <Link href="/burimet">Burimet</Link>.
+        </Notice>
+      ) : null}
+      {data && viewer.profile && viewer.profile.capital.amount === 0 ? (
+        <Notice tone="info" title="Kapitali juaj është 0" className="mb-4">
+          Me kapital 0 mund të testoni vetëm kërkesën, me mënyrat e ligjshme të secilës ide. Bizneset me pajisje, leje ose inventar nuk hapen pa shpenzime.
+        </Notice>
+      ) : null}
+      {data && viewer.profile && !data.ctx.isDemo && !viewer.profile.operableCountries.includes(code) ? (
+        <Notice tone="warn" title={`Nuk keni deklaruar se mund të operoni në ${data.ctx.country.nameSq}`} className="mb-4">
+          Për idetë fizike ose të kombinuara, verifikoni të drejtën e qëndrimit, punës dhe regjistrimit para çdo hapi (Kërkon verifikim lokal). Idetë online për klientë në këtë vend mund të drejtohen nga vendi ku keni të drejtë të punoni.
         </Notice>
       ) : null}
       {data?.ctx.isDemo ? (

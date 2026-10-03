@@ -23,6 +23,7 @@ import type {
   UserProfile,
 } from '@/lib/domain/types';
 import { DEFAULT_SCORE_WEIGHTS, SCORE_DIMENSION_LABELS } from '@/lib/domain/taxonomy';
+import { getIndicator } from '@/lib/data/indicators';
 import { formatIndicatorValue, formatNumber, formatPercent, formatPeriod } from '@/lib/finance/format';
 import { HIGH_INFLATION_PCT, HIGH_LENDING_RATE_PCT, macroClaimStance } from '@/lib/ideas/claims';
 import { sameCurrency } from '@/lib/ideas/fit';
@@ -165,14 +166,24 @@ function demandDimension(macroClaims: Claim[], ctx: CountryDataContext, evidence
       'Asnjë tregues i lidhur me këtë ide nuk ka të dhëna për këtë vend dhe nuk keni regjistruar prova nga klientët — nuk vlerësohet (nuk trajtohet si 0).',
     );
   }
+  if (assessed === 0 && ev.paid === 0) {
+    // Interviews alone are words, not behaviour, and there is no macro signal: not assessable (never a guessed 50).
+    return dim(
+      'kerkesa',
+      null,
+      'mungon',
+      `Asnjë tregues i lidhur nuk ka të dhëna për këtë vend dhe nuk ka ende pagesa nga klientë (${formatNumber(ev.interviews)} intervista nuk mjaftojnë) — nuk vlerësohet (nuk trajtohet si 0).`,
+    );
+  }
   // Macro part: neutral 50, moved towards 100/0 by the share of supporting/contradicting links.
-  const macro = assessed > 0 ? 50 + (50 * (supports - contradicts)) / assessed : 50;
+  // Without macro data the score starts from recorded payments only (0 + boosts).
+  const macro = assessed > 0 ? 50 + (50 * (supports - contradicts)) / assessed : 0;
   const paidBoost = Math.min(PAID_EVIDENCE_CAP, ev.paid * PAID_EVIDENCE_POINTS);
   const interviewBoost = Math.min(INTERVIEW_CAP, ev.interviews * INTERVIEW_POINTS);
   const parts = [
     assessed > 0
       ? `${supports} tregues ${verb(supports, 'e mbështet', 'e mbështetin')}, ${contradicts} ${verb(contradicts, 'e kundërshton', 'e kundërshtojnë')} dhe ${neutral} ${verb(neutral, 'nuk mund të gjykohet', 'nuk mund të gjykohen')} (nga ${assessed} me të dhëna)${ctx.isDemo ? ' — të dhëna DEMO, fiktive' : ''}`
-      : 'asnjë tregues i lidhur nuk ka të dhëna; nisja është neutrale (50)',
+      : 'asnjë tregues i lidhur nuk ka të dhëna; vlerësimi bazohet vetëm te pagesat e regjistruara',
   ];
   if (ev.paid > 0) parts.push(`${formatNumber(ev.paid)} pagesa/parapagime të regjistruara (+${formatNumber(paidBoost)})`);
   if (ev.interviews > 0) parts.push(`${formatNumber(ev.interviews)} intervista (+${formatNumber(interviewBoost)}; fjalët nuk janë sjellje)`);
@@ -298,6 +309,8 @@ function latestValue(ctx: CountryDataContext, code: string): { value: number; te
   const s = ctx.series.find((x) => x.definition.code === code);
   const v = s?.latest?.value;
   if (!s || !s.latest || typeof v !== 'number' || !Number.isFinite(v)) return null;
+  // A value many years old is not evidence about today's conditions.
+  if (s.status === 'shume_i_vjeter') return null;
   return { value: v, text: `${s.definition.nameSq} ${formatIndicatorValue(v, s.definition)} (${formatPeriod(s.latest.period)})` };
 }
 
@@ -443,7 +456,7 @@ export function assessEvidenceQuality(allClaims: Claim[], ctx: CountryDataContex
   }
   if (staleIndicators.length > 0) {
     if (staleIndicators.length * 2 >= cited.size) level = downgrade(level);
-    notesSq.push(`Tregues të vjetër mes atyre të cituar: ${staleIndicators.join(', ')}.`);
+    notesSq.push(`Tregues të vjetër mes atyre të cituar: ${staleIndicators.map((c) => getIndicator(c)?.nameSq ?? c).join(', ')}.`);
   }
   if (ctx.isDemo) {
     level = lower(level, 'e_ulet');

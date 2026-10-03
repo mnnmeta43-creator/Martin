@@ -103,7 +103,7 @@ describe('buildPlanPdf', () => {
     expect(flat).toContain(compact(breakEvenSq(base.unitEconomics, inputs.unitLabelSq)));
     expect(flat).toContain(compact('Rikuperimi i investimit (vlerësim, jo datë e garantuar)'));
     expect(flat).toContain(compact(base.payback.statementSq));
-    expect(text).toContain('Paraja më e ulët (supozim)');
+    expect(text).toContain('Gjendja më e ulët e parasë (supozim)');
     expect(flat).toContain(compact(`${money(base.minCashBalance)} — ${minCashMonthSq(base.minCashMonth)}`));
     expect(flat).toContain(compact('Paga e pronarit përfshihet në kosto'));
     expect(flat).toContain(compact('Nuk supozohet asnjë kredi, grant apo financim tjetër'));

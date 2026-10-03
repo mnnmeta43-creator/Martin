@@ -324,7 +324,7 @@ export function ProfileForm({
           <input type="checkbox" checked={p.isAdult} onChange={(e) => set('isAdult', e.target.checked)} className="mt-0.5 h-5 w-5 accent-[var(--color-accent)]" />
           <span>
             Jam 18 vjeç ose më shumë.
-            <span className="block text-xs text-muted">Disa veprimtari kërkojnë moshë madhore; për të miturit tregohen vetëm ide të përshtatshme dhe me shënimin për pëlqimin e prindit.</span>
+            <span className="block text-xs text-muted">Disa veprimtari kërkojnë moshë madhore; nëse jeni nën 18 vjeç, ato përjashtohen nga rekomandimet.</span>
           </span>
         </label>
       </Section>

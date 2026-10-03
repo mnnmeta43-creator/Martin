@@ -10,6 +10,7 @@
  * The stance of each macro interpretation (supports / contradicts / not assessable) is encoded
  * in its claim id so scoring and the country comparison read exactly what the user sees.
  */
+import { REGULATORY_PREFIX_SQ } from '@/lib/ideas/fit';
 import type {
   BusinessArchetype,
   Citation,
@@ -309,11 +310,13 @@ export function buildWhyWorkClaims(
   const againstSq = against.length > 0 ? ` Por këta tregues e kundërshtojnë: ${indicatorNames(against)}.` : '';
   const changeSq =
     support.length > 0
-      ? `${prefix}Ndryshimi: ${w.changeSq} Të dhënat që e mbështetin: ${indicatorNames(support)}.${againstSq}`
+      ? `${prefix}Ndryshimi (hipotezë): ${w.changeSq} Tregues të lidhur që përputhen me të: ${indicatorNames(support)} — kontekst, jo provë e këtij ndryshimi.${againstSq}`
       : `${prefix}Ndryshimi: ${w.changeSq} Asnjë tregues i lidhur nuk e mbështet me të dhëna për këtë vend — trajtojeni si hipotezë.${againstSq}`;
   const id = (step: string) => `${a.id}:pse-funksionon:${step}`;
   return [
-    claim(id('ndryshimi'), changeSq, 'interpretim', support.length > 0 ? 'mbeshtetet_nga_te_dhenat' : 'hipoteze', support),
+    // A matching macro indicator is context for the narrative, not proof of it: always a hypothesis,
+    // with the indicator citations attached so the reader can check them.
+    claim(id('ndryshimi'), changeSq, 'interpretim', 'hipoteze', support),
     claim(id('problemi'), `Problemi: ${w.problemSq}`, 'interpretim', 'hipoteze'),
     claim(id('klienti'), `Klienti: ${w.customerSq}`, 'supozim', 'duhet_testuar'),
     claim(id('oferta'), `Oferta: ${w.offerSq}`, 'supozim', 'hipoteze'),
@@ -336,6 +339,7 @@ interface Measured {
 function measured(ctx: CountryDataContext, code: string): Measured | null {
   const series = seriesFor(ctx, code);
   if (!series || !hasValue(series.latest)) return null;
+  if (series.status === 'shume_i_vjeter') return null; // too old to describe current risk
   const citation = citationForObservation(series.definition, series.latest);
   return {
     def: series.definition,
@@ -356,7 +360,7 @@ function dataRiskClaims(a: BusinessArchetype, ctx: CountryDataContext): Claim[] 
         id('inflacioni'),
         `${prefix}Rrezik kostoje: ${inflation.def.nameSq} ${inflation.valueSq} është mbi pragun orientues ${HIGH_INFLATION_PCT}%. Kostot e furnizimit, qiraja dhe pagat mund të rriten më shpejt se çmimet që mund të vendosni; rishikoni ofertat e furnitorëve më shpesh.`,
         'interpretim',
-        'mbeshtetet_nga_te_dhenat',
+        'hipoteze',
         [inflation.citation],
       ),
     );
@@ -368,7 +372,7 @@ function dataRiskClaims(a: BusinessArchetype, ctx: CountryDataContext): Claim[] 
         id('kredia'),
         `${prefix}Kredia është e shtrenjtë: ${lending.def.nameSq} ${lending.valueSq} është mbi pragun orientues ${HIGH_LENDING_RATE_PCT}%. Modeli nuk supozon kredi; nëse mungesën e kapitalit e mbuloni me borxh, interesi e rëndon ndjeshëm rezultatin.`,
         'interpretim',
-        'mbeshtetet_nga_te_dhenat',
+        'hipoteze',
         [lending.citation],
       ),
     );
@@ -380,7 +384,7 @@ function dataRiskClaims(a: BusinessArchetype, ctx: CountryDataContext): Claim[] 
         id('tkurrja'),
         `${prefix}Rrezik kërkese: ${growth.def.nameSq} ${growth.valueSq} është negative. Në tkurrje klientët shpesh shtyjnë blerjet jo-thelbësore dhe pagesat vonohen.`,
         'interpretim',
-        'mbeshtetet_nga_te_dhenat',
+        'hipoteze',
         [growth.citation],
       ),
     );
@@ -476,7 +480,11 @@ export function buildWhyFailClaims(
   );
   const profile = [
     ...fit.blockersSq.map((b, i) => claim(id(`pengese-${i + 1}`), `Pengesë nga profili: ${b}`, 'interpretim', 'hipoteze')),
-    ...fit.mismatchesSq.map((t, i) => claim(id(`profili-${i + 1}`), `Mospërputhje me profilin: ${t}`, 'interpretim', 'hipoteze')),
+    ...fit.mismatchesSq.map((t, i) =>
+      t.startsWith(REGULATORY_PREFIX_SQ)
+        ? claim(id(`profili-${i + 1}`), `Kufizim ligjor: ${t.slice(REGULATORY_PREFIX_SQ.length)}`, 'supozim', 'duhet_testuar')
+        : claim(id(`profili-${i + 1}`), `Mospërputhje me profilin: ${t}`, 'interpretim', 'hipoteze'),
+    ),
   ];
   const falsifiers = a.falsifiersSq.map((f, i) => claim(id(`rrezuese-${i + 1}`), `Ideja rrëzohet nëse: ${f}`, 'supozim', 'duhet_testuar'));
   return [...failures, ...dataRiskClaims(a, ctx), ...engineRiskClaims(a, projection, currency), ...profile, ...falsifiers];

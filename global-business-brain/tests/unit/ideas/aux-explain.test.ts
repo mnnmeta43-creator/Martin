@@ -37,7 +37,7 @@ describe('explainInSixSteps', () => {
     expect(steps.whyItCouldWorkSq).toContain('[DEMO]');
     expect(steps.whyItCouldWorkSq).toContain('Përdoruesit e internetit');
     expect(steps.whyItCouldWorkSq).toContain('Cilësia e provave: e ulët');
-    expect(steps.whyItCouldWorkSq).toContain('Asnjë tregues makro nuk e mbështet');
+    expect(steps.whyItCouldWorkSq).toContain('Asnjë tregues makro nuk përputhet ende me ndryshimin');
   });
 
   it('says honestly when capital cannot be estimated (missing FX)', () => {

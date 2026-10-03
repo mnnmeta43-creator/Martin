@@ -52,7 +52,7 @@ export default async function IdeaPage(props: Props) {
   const { rec, ctx, projections, inputs } = view;
   const base = projections?.baze ?? null;
   const cur = inputs?.currency ?? viewer.profile?.capital.currency ?? 'EUR';
-  const planPreview = inputs && base ? generatePlan({ archetype, countryCode: code, city: viewer.profile?.targetCity ?? null, inputs, projection: base }) : null;
+  const planPreview = inputs && base ? generatePlan({ archetype, countryCode: code, city: rec.city ?? null, inputs, projection: base }) : null;
   const first7 = planPreview ? tasksForHorizon(planPreview.tasks, 7) : [];
   const allCitations = [...rec.claims.macro, ...rec.claims.whyWork, ...rec.claims.whyFail].flatMap((c) => c.citations);
   const uniqueCitations = allCitations.filter((c, i) => allCitations.findIndex((d) => d.url === c.url && d.indicatorCode === c.indicatorCode && d.period === c.period) === i);
@@ -79,7 +79,7 @@ export default async function IdeaPage(props: Props) {
               <dt className="text-muted">Ku propozohet të operojë</dt>
               <dd className="text-ink">
                 {ctx.country.nameSq}
-                {viewer.profile?.targetCity ? ` · ${viewer.profile.targetCity} (pa të dhëna të verifikuara për qytetin — shihni planin e kërkimit në terren)` : ''}
+                {rec.city ? ` · ${rec.city} (pa të dhëna të verifikuara për qytetin — shihni planin e kërkimit në terren)` : ''}
               </dd>
             </div>
             <div>
@@ -139,7 +139,7 @@ export default async function IdeaPage(props: Props) {
           </ul>
         </Card>
         <Card>
-          <CardHeader title="Pikëzimi krahasues" subtitle={`Cilësia e provave: ${EVIDENCE_TEXT[rec.evidence.level]} · mbulimi: vlerësuar veçmas`} />
+          <CardHeader title="Pikëzimi krahasues" subtitle={`Cilësia e provave: ${EVIDENCE_TEXT[rec.evidence.level]} · mbulimi i të dhënave tregohet më lart`} />
           <ScoreBreakdown dimensions={rec.score.dimensions} initialWeights={rec.score.weights} noteSq={rec.score.noteSq} />
         </Card>
       </div>
@@ -205,11 +205,16 @@ export default async function IdeaPage(props: Props) {
               {archetype.licensedProfessionalsSq.length > 0 ? <p className="mt-2">Profesionistë të licencuar të nevojshëm: {archetype.licensedProfessionalsSq.join(', ')}.</p> : null}
             </Notice>
           ) : (
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
-              {archetype.regulationNotesSq.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
+            <>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
+                {archetype.regulationNotesSq.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+              {archetype.licensedProfessionalsSq.length > 0 ? (
+                <p className="mt-2 text-xs text-warn">Profesionistë të licencuar për disa punë: {archetype.licensedProfessionalsSq.join(', ')}.</p>
+              ) : null}
+            </>
           )}
         </Card>
       </div>

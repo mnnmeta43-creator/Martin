@@ -25,7 +25,7 @@ import type {
 import { assetLabel } from '@/lib/domain/taxonomy';
 import { convert, rateTextSq, type FxConversionOk } from '@/lib/finance/currency';
 import { formatMoney, formatNumber, formatPeriod } from '@/lib/finance/format';
-import { formatIsoDateSq } from '@/lib/finance/locale';
+import { formatIsoDateSq, sourceNameSq } from '@/lib/finance/locale';
 
 export interface PriceLevelAdjustment {
   factor: number;
@@ -104,7 +104,7 @@ function conversionSentenceSq(archetype: BusinessArchetype, currency: CurrencyCo
   const library = `Supozim i përgjithshëm i bibliotekës (${archetype.assumptionsDate})`;
   if (currency === 'USD') return `${library}, në USD (pa konvertim).`;
   const via = fx.viaCurrency ? `, përmes ${fx.viaCurrency}` : '';
-  return `${library}, konvertuar nga USD me kursin ${rateTextSq('USD', currency, fx.rate)} të datës ${formatIsoDateSq(fx.rateDate)} (${fx.sourceId}${via}).`;
+  return `${library}, konvertuar nga USD me kursin ${rateTextSq('USD', currency, fx.rate)} të datës ${formatIsoDateSq(fx.rateDate)} (${sourceNameSq(fx.sourceId)}${via}).`;
 }
 
 function citationPeriodSq(citation: Citation): string {
