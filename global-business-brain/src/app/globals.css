@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/*
+ * Global Business Brain — design tokens.
+ * Dark navy/black surfaces, high-contrast text, electric-blue accent.
+ * Status colours are paired with text labels everywhere (never colour alone).
+ */
+@theme {
+  --color-bg: #05070d;
+  --color-surface: #0b1220;
+  --color-surface-2: #111a2e;
+  --color-surface-3: #18233b;
+  --color-line: #1f2b45;
+  --color-line-strong: #2c3b5c;
+  --color-ink: #eaf0fb;
+  --color-muted: #a3b1ca;
+  --color-faint: #71809c;
+  --color-accent: #2f7bff;
+  --color-accent-strong: #5b9bff;
+  --color-accent-soft: #10264d;
+  --color-ok: #34d399;
+  --color-ok-soft: #0c2e25;
+  --color-warn: #f5b83d;
+  --color-warn-soft: #33270b;
+  --color-bad: #f87171;
+  --color-bad-soft: #3a1414;
+  --color-demo: #c084fc;
+  --color-demo-soft: #2a1640;
+  /* Chart series slots (validated for CVD separation on the dark surface #0b1220). */
+  --color-chart-1: #3987e5;
+  --color-chart-2: #d95926;
+  --color-chart-3: #199e70;
+  --color-chart-neg: #e66767;
+  --color-chart-grid: #1c2740;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* Tables scroll inside their own container on small screens, never the page. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
