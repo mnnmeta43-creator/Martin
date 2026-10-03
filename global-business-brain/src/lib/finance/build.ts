@@ -75,7 +75,7 @@ export type BuildResult =
  * the cost is treated as traded (materials, hosting) and NOT scaled by the local price level, which
  * avoids understating costs in low-price countries.
  */
-type PricingAssumptions = BusinessArchetype['pricing'] & { variableCostScalesWithPriceLevel?: boolean };
+type PricingAssumptions = BusinessArchetype['pricing'];
 
 type UsdRange = { low: number; base: number; high: number };
 
@@ -166,14 +166,18 @@ function rangeSq(range: UsdRange, currency: CurrencyCode): string {
   return `${formatMoney(range.base, currency)} (diapazoni ${formatMoney(range.low, currency)}–${formatMoney(range.high, currency)})`;
 }
 
-function priceLevelNoteSq(level: PriceLevelAdjustment, variableScaled: boolean): string {
-  const scaled = variableScaled
-    ? 'kostot lokale (qira, punë, shërbime), çmimi për njësi dhe kostoja variabël për njësi'
-    : 'kostot lokale (qira, punë, shërbime) dhe çmimi për njësi';
+function priceLevelNoteSq(level: PriceLevelAdjustment, variableScaled: boolean, priceScaled = true): string {
+  const parts = ['kostot lokale (qira, punë, shërbime)'];
+  if (priceScaled) parts.push('çmimi për njësi');
+  if (variableScaled) parts.push('kostoja variabël për njësi');
+  const scaled = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} dhe ${parts[parts.length - 1]}`;
+  const priceSq = priceScaled
+    ? ''
+    : ' Çmimi për njësi NUK u shumëzua: supozohet mall me çmim ndërkombëtar (p.sh. pjesë të importuara, produkte që shiten jashtë vendit).';
   const variableSq = variableScaled
     ? ''
     : ' Kostoja variabël për njësi NUK u shumëzua: supozohet mall ose shërbim me çmim ndërkombëtar (p.sh. materiale, hostim). Nëse te ju është punë lokale, ndryshojeni sipas ofertave.';
-  return `Niveli i çmimeve: ${scaled} u shumëzuan me faktorin ${formatNumber(level.factor, 2)} nga ${level.citation.sourceName} (periudha ${citationPeriodSq(level.citation)}). Kjo është supozim: çmimet lokale të shërbimeve priren të ndjekin nivelin e përgjithshëm të çmimeve, por duhet verifikuar.${variableSq}`;
+  return `Niveli i çmimeve: ${scaled} u shumëzuan me faktorin ${formatNumber(level.factor, 2)} nga ${level.citation.sourceName} (periudha ${citationPeriodSq(level.citation)}). Kjo është supozim: çmimet lokale të shërbimeve priren të ndjekin nivelin e përgjithshëm të çmimeve, por duhet verifikuar.${priceSq}${variableSq}`;
 }
 
 function scenarioFromRamp(ramp: Ramp, defaults: (typeof SCENARIO_DEFAULTS)[keyof typeof SCENARIO_DEFAULTS], collectionDays: number): ScenarioParams {
@@ -229,7 +233,9 @@ export function buildFinancialInputs(archetype: BusinessArchetype, ctx: BuildCon
   const pricing: PricingAssumptions = archetype.pricing;
   const levelFactor = priceLevel ? priceLevel.factor : 1;
   const variableScaled = priceLevel !== null && pricing.variableCostScalesWithPriceLevel === true;
-  const price = scaledRange(pricing.priceUSD, fx.rate * levelFactor);
+  // Internationally priced goods (e.g. imported spare parts) keep their USD price level.
+  const priceScaled = priceLevel !== null && pricing.priceScalesWithPriceLevel !== false;
+  const price = scaledRange(pricing.priceUSD, fx.rate * (priceScaled ? levelFactor : 1));
   const variable = scaledRange(pricing.variableCostUSD, fx.rate * (variableScaled ? levelFactor : 1));
   const konservatorDays = SCENARIO_DEFAULTS.konservator.extraCollectionDays;
 
@@ -242,7 +248,7 @@ export function buildFinancialInputs(archetype: BusinessArchetype, ctx: BuildCon
   const assumptionsNotesSq = [
     `${lineCtx.conversionSq} Këto nuk janë çmime të verifikuara: zëvendësojini me oferta reale sapo t’i keni.`,
     unitNoteSq,
-    ...(priceLevel ? [priceLevelNoteSq(priceLevel, variableScaled)] : []),
+    ...(priceLevel ? [priceLevelNoteSq(priceLevel, variableScaled, priceScaled)] : []),
     'Tatimi mbi fitimin: Kërkon verifikim lokal (vendosur 0%)',
     includeOwnerSalary ? ownerSalaryNoteSq : 'Paga e pronarit nuk përfshihet — rezultati operativ e mbivlerëson atë që ju mbetet.',
     `Skenari konservator: klientët paguajnë ${konservatorDays} ditë më vonë se në supozimin bazë (${pricing.collectionDays} + ${konservatorDays} = ${pricing.collectionDays + konservatorDays} ditë). Nëse ndryshoni ditët bazë, përditësoni edhe ditët e skenarit konservator.`,

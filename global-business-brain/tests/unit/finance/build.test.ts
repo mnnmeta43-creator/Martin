@@ -255,3 +255,26 @@ describe('buildFinancialInputs — range and provenance of price, unit variable 
     );
   });
 });
+
+describe('priceScalesWithPriceLevel', () => {
+  it('keeps the USD price of internationally priced goods while still scaling local cost lines', () => {
+    const ctx: BuildContext = {
+      currency: 'USD',
+      fxRates: FIXTURE_FX_RATES,
+      ownCapital: 0,
+      priceLevel: { factor: 0.5, citation: FIXTURE_PRICE_LEVEL_CITATION },
+      assets: [],
+      startMonth: 1,
+      today: '2026-10-02',
+    };
+    const traded: BusinessArchetype = { ...FINANCE_ARCHETYPE, pricing: { ...FINANCE_ARCHETYPE.pricing, priceScalesWithPriceLevel: false } };
+    const local = buildFinancialInputs(FINANCE_ARCHETYPE, ctx);
+    const goods = buildFinancialInputs(traded, ctx);
+    if (!local.ok || !goods.ok) throw new Error('build failed');
+    expect(local.inputs.pricePerUnit).toBeCloseTo(FINANCE_ARCHETYPE.pricing.priceUSD.base * 0.5, 6);
+    expect(goods.inputs.pricePerUnit).toBeCloseTo(FINANCE_ARCHETYPE.pricing.priceUSD.base, 6);
+    expect(goods.inputs.assumptionsNotesSq.join(' ')).toContain('Çmimi për njësi NUK u shumëzua');
+    // Local cost lines still follow the price level in both cases.
+    expect(goods.inputs.startupCosts.map((l) => l.amount)).toEqual(local.inputs.startupCosts.map((l) => l.amount));
+  });
+});

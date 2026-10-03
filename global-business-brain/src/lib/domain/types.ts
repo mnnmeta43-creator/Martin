@@ -458,6 +458,10 @@ export interface BusinessArchetype {
     collectionDays: number;
     supplierPaymentDays: number;
     noteSq: string;
+    /** Default true: local service prices follow the local price level. False for internationally priced goods. */
+    priceScalesWithPriceLevel?: boolean;
+    /** Default false: unit variable cost is treated as traded (materials, hosting) unless marked local. */
+    variableCostScalesWithPriceLevel?: boolean;
   };
   startupCosts: CostItemTemplate[];
   monthlyFixedCosts: CostItemTemplate[];
