@@ -1942,4 +1942,683 @@ export const BATCH_A: BusinessArchetype[] = [
       'Çmimet dhe kostot janë supozime të përgjithshme të bibliotekës në USD, jo çmime të verifikuara për ndonjë vend. Treguesit makro vijnë nga burimet e regjistrit me datë dhe periudhë.',
     assumptionsDate: '2026-10-02',
   },
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 7. Translation + document preparation for study/work/visa applications — online,
+  //    local + diaspora; certified translations only by sworn translators, no legal advice
+  // ───────────────────────────────────────────────────────────────────────────
+  {
+    id: 'perkthime-dhe-pergatitje-dokumentesh',
+    nameSq: 'Përkthime dhe përgatitje dokumentesh për studime, punë dhe viza',
+    taglineSq: 'Listë e qartë dokumentesh, përkthime të sakta dhe dosje e rregullt; përkthimet zyrtare nga përkthyes i betuar.',
+    descriptionSq:
+      'Shërbim për persona që aplikojnë për studime, punë, bashkim familjar ose vizë dhe duhet të përgatisin dokumente në një gjuhë tjetër: diploma, lista notash, vërtetime, letra rekomandimi, CV dhe letra motivimi. Shërbimi përkthen dokumentet që nuk kërkojnë vulë zyrtare, koordinon përkthimin zyrtar me përkthyes të betuar kur kërkohet, rendit dosjen sipas listës zyrtare që klienti ka marrë nga institucioni pritës dhe kontrollon që asgjë të mos mungojë. Nuk jepen këshilla ligjore ose imigracioni pa licencë dhe nuk ndryshohet kurrë përmbajtja e një dokumenti. Diaspora mund të shërbehet online.',
+    sector: 'diaspora',
+    offerSq:
+      'Paketë për aplikim: kontroll i dokumenteve që sjell klienti kundrejt listës zyrtare, përkthim i dokumenteve joformale (CV, letër motivimi, letra rekomandimi), koordinim i përkthimit zyrtar dhe i noterizimit me përkthyes të betuar dhe noter kur kërkohet, formatim sipas kërkesave dhe dosje përfundimtare (në letër ose PDF) me listë kontrolli. Afat i shkruar dhe ruajtje e sigurt e dokumenteve, me fshirje pas përfundimit.',
+    payingCustomerSq:
+      'Studentë, punëtorë dhe familje që aplikojnë jashtë vendit, ose persona në diasporë që kanë nevojë për dokumente nga vendlindja.',
+    customerSegments: ['b2c'],
+    problemSq:
+      'Aplikimet refuzohen ose vonohen për dokumente që mungojnë, përkthime të pasakta ose formate të gabuara; njerëzit humbasin ditë pune duke shkuar nga një zyrë te tjetra dhe nuk e dinë cilat dokumente kërkojnë përkthim zyrtar dhe cilat jo.',
+    modes: ['online', 'kombinuar'],
+    marketScopes: ['lokal', 'nderkombetar'],
+    canStartFromHome: true,
+    minTeam: 'vetem',
+    requiredSkills: ['shkrim_perkthim', 'gjuhe_te_huaja'],
+    helpfulSkills: ['administrim', 'sherbim_klienti', 'marketing_digjital'],
+    helpfulAssets: ['kompjuter', 'internet_i_qendrueshem', 'telefon_smart', 'rrjet_diaspore'],
+    minHoursPerWeek: 10,
+    regulated: true,
+    regulationNotesSq: [
+      'Përkthimet zyrtare (të vulosura ose të betuara) të diplomave, vërtetimeve dhe dokumenteve civile mund t’i bëjë vetëm përkthyes i betuar ose i licencuar, sipas rregullave të vendit ku do të përdoren; Kërkon verifikim lokal për çdo vend pritës.',
+      'Legalizimi, apostila dhe noterizimi ndjekin procedura zyrtare që ndryshojnë sipas vendit; jepini klientit vetëm informacionin nga burimi zyrtar dhe verifikojeni para çdo aplikimi.',
+      'Këshillat për të drejtën e imigracionit, zgjedhjen e llojit të vizës ose shanset e miratimit lejohen në shumë vende vetëm për avokatë ose këshilltarë të licencuar; mos i jepni pa licencë dhe mos premtoni miratim.',
+      'Mos ndryshoni, mos “përmirësoni” dhe mos krijoni kurrë përmbajtje në dokumente zyrtare; refuzoni çdo kërkesë të tillë, sepse është mashtrim dhe vepër penale.',
+      'Pasaportat, diplomat dhe të dhënat familjare janë të dhëna personale të ndjeshme: verifikoni rregullat lokale të mbrojtjes së të dhënave, ruajini të enkriptuara dhe fshijini pas përfundimit sipas marrëveshjes.',
+      'Regjistrimi i aktivitetit, faturimi për klientë jashtë vendit dhe sigurimi i përgjegjësisë profesionale: Kërkon verifikim lokal.',
+    ],
+    licensedProfessionalsSq: [
+      'Përkthyes i betuar ose i licencuar për përkthimet që kërkojnë vulë zyrtare',
+      'Noter për noterizimin dhe vërtetimin e kopjeve',
+      'Avokat ose këshilltar imigracioni i licencuar për çdo këshillë ligjore ose për zgjedhjen e llojit të vizës',
+    ],
+    adultOnly: true,
+    zeroCapitalTestSq:
+      'Me kompjuterin dhe gjuhët që zotëroni: ofroni falas 5 personave që njihni dhe që po aplikojnë për studime ose punë jashtë vendit kontrollin e dosjes sipas listës zyrtare dhe përkthimin e CV-së ose të letrës së motivimit. Pastaj u bëni ofertë me çmim për pjesën tjetër dhe njoftoni rrjetin tuaj në diasporë për shërbimin. Kostoja reale: koha juaj; përkthimet zyrtare kushtojnë te përkthyesi i betuar dhe i paguan klienti. Për punë të rregullt me pagesë duhet regjistrimi i aktivitetit (kërkon verifikim lokal).',
+    revenueModelSq:
+      'Çmim për faqe të përkthyer (njësia = 1 faqe standarde), ku përfshihet mesatarisht edhe kontrolli i dosjes. Tarifat e përkthyesit të betuar, të noterit dhe të institucioneve i paguan klienti me koston reale dhe nuk përfshihen në modelin bazë.',
+    pricing: {
+      unitLabelSq: 'faqe e përkthyer',
+      priceUSD: { low: 12, base: 25, high: 45 },
+      variableCostUSD: { low: 1, base: 3, high: 7 },
+      unitsPerCustomerPerMonth: 6,
+      collectionDays: 0,
+      supplierPaymentDays: 0,
+      noteSq:
+        'Kostoja variabël përfshin printimin, korrierin, ruajtjen e sigurt dhe rishikimin nga një përkthyes i dytë për dokumentet e rëndësishme. Tarifat e përkthyesit të betuar dhe të noterit i kalojnë klientit me koston reale. “Klient” = një aplikim me mesatarisht rreth 6 faqe; shumica e klientëve vijnë një herë, prandaj humbja mujore në skenarë është e lartë. Çmimet janë supozime në USD; verifikoni sa kërkojnë zyrat e përkthimit në zonë dhe sa paguajnë klientët sot.',
+    },
+    startupCosts: [
+      {
+        id: 'laptop',
+        labelSq: 'Laptop pune',
+        category: 'pajisje',
+        lowUSD: 400,
+        highUSD: 900,
+        noteSq: 'Nevojitet vetëm nëse nuk keni kompjuter; një laptop i përdorur në gjendje të mirë mjafton për përkthime.',
+        scalesWithPriceLevel: false,
+        optional: true,
+        avoidedByAssets: ['kompjuter'],
+      },
+      {
+        id: 'translation-tools',
+        labelSq: 'Fjalorë profesionalë, program përkthimi me memorie dhe shabllone',
+        category: 'hapje',
+        lowUSD: 50,
+        highUSD: 300,
+        noteSq:
+          'Shumë mjete kanë plane falas ose licenca të përhershme; blini fjalorët e specializuar vetëm për fushat që përktheni më shpesh.',
+        scalesWithPriceLevel: false,
+      },
+      {
+        id: 'scanner-printer',
+        labelSq: 'Skaner dhe printer',
+        category: 'pajisje',
+        lowUSD: 100,
+        highUSD: 300,
+        noteSq: 'Për dosjet në letër dhe kopjet me cilësi të mirë; në fillim mund të përdorni një qendër printimi.',
+        scalesWithPriceLevel: false,
+        optional: true,
+      },
+      {
+        id: 'sworn-translator-procedure',
+        labelSq: 'Provim ose procedurë për t’u bërë përkthyes i betuar (opsionale)',
+        category: 'tarifa',
+        lowUSD: 0,
+        highUSD: 500,
+        noteSq:
+          'Vetëm nëse i plotësoni kushtet; procedura, afatet dhe tarifat i vendos institucioni përgjegjës — verifikojini para se të aplikoni.',
+        scalesWithPriceLevel: true,
+        optional: true,
+      },
+      {
+        id: 'registration-fees',
+        labelSq: 'Regjistrim aktiviteti dhe faturim',
+        category: 'tarifa',
+        lowUSD: 0,
+        highUSD: 150,
+        noteSq: 'Tarifat ndryshojnë sipas vendit dhe formës ligjore; merrni shumën e saktë nga regjistri zyrtar i bizneseve.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'market-test',
+        labelSq: 'Test tregu: 5 kontrolle dosjesh falas, printime dhe korrier',
+        category: 'testim_tregu',
+        lowUSD: 20,
+        highUSD: 120,
+        noteSq: 'Printimi i listave të kontrollit dhe i shembujve, korrieri për dosjet e para dhe transporti te noteri ose te përkthyesi i betuar.',
+        scalesWithPriceLevel: true,
+      },
+    ],
+    monthlyFixedCosts: [
+      {
+        id: 'software-secure-storage',
+        labelSq: 'Program përkthimi, ruajtje e enkriptuar dhe email profesional',
+        category: 'software',
+        lowUSD: 15,
+        highUSD: 50,
+        noteSq: 'Ruajtja e enkriptuar është e domosdoshme për dokumentet e identitetit; krahasoni planet sipas hapësirës dhe kontrollit të qasjes.',
+        scalesWithPriceLevel: false,
+      },
+      {
+        id: 'professional-insurance',
+        labelSq: 'Sigurim i përgjegjësisë profesionale',
+        category: 'sigurime',
+        lowUSD: 10,
+        highUSD: 50,
+        noteSq: 'Mbulon dëmin nga një gabim përkthimi; pyesni 2–3 agjenci dhe verifikoni nëse kërkohet për përkthyesit në vendin tuaj.',
+        scalesWithPriceLevel: true,
+        optional: true,
+      },
+      {
+        id: 'phone-internet',
+        labelSq: 'Telefon dhe internet pune',
+        category: 'sherbime_komunale',
+        lowUSD: 10,
+        highUSD: 40,
+        noteSq: 'Pjesa e faturës që lidhet me punën; verifikoni paketat e operatorëve lokalë.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'courier-transport',
+        labelSq: 'Korrier dhe transport te noteri ose zyrat',
+        category: 'transport',
+        lowUSD: 10,
+        highUSD: 50,
+        noteSq: 'Varet nga sa dosje kërkojnë origjinale në letër; për diasporën vendosni në ofertë kush paguan dërgesat ndërkombëtare.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'bookkeeping',
+        labelSq: 'Kontabilist i jashtëm',
+        category: 'kontabilitet',
+        lowUSD: 0,
+        highUSD: 60,
+        noteSq: 'Me klientë jashtë vendit faturimi mund të jetë më i ndërlikuar; verifikoni detyrimet lokale.',
+        scalesWithPriceLevel: true,
+        optional: true,
+      },
+    ],
+    ramp: {
+      konservator: { startCustomers: 2, monthlyNewCustomers: 4, monthlyChurnPct: 85 },
+      baze: { startCustomers: 4, monthlyNewCustomers: 8, monthlyChurnPct: 80 },
+      optimist: { startCustomers: 6, monthlyNewCustomers: 14, monthlyChurnPct: 75 },
+    },
+    seasonality: [1.1, 1.15, 1.2, 1.1, 1, 0.95, 1.05, 1, 0.95, 0.9, 0.8, 0.8],
+    seasonalityNoteSq:
+      'Hipotezë: aplikimet për studime jashtë vendit grumbullohen në dimër dhe në pranverë, ndërsa diaspora i rregullon dokumentet kur vjen në vendlindje gjatë verës. Afatet ndryshojnë sipas vendit pritës; verifikojeni me porositë tuaja pas 6 muajsh.',
+    macroLinks: [
+      {
+        indicatorCode: 'remittances_gdp',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Remitancat e larta tregojnë lidhje të forta me një diasporë të madhe, që ka nevojë të vazhdueshme për dokumente nga vendlindja (gjendje civile, diploma, prokura).',
+        ifSupportsSq: 'Remitancat e larta sugjerojnë një bazë të madhe klientësh në diasporë që mund të shërbehen online.',
+        ifContradictsSq:
+          'Me remitanca të ulëta, tregu i diasporës mund të jetë më i vogël; fokusohuni te studentët dhe punëtorët që aplikojnë jashtë.',
+      },
+      {
+        indicatorCode: 'youth_unemployment',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Kur të rinjtë gjejnë më pak punë në vend, më shumë prej tyre aplikojnë për studime ose punë jashtë vendit dhe kanë nevojë për dokumente të përkthyera.',
+        ifSupportsSq: 'Papunësia e lartë e të rinjve sugjeron një rrjedhë të vazhdueshme aplikimesh jashtë vendit.',
+        ifContradictsSq:
+          'Me papunësi të ulët të të rinjve, kërkesa vjen më shumë nga studimet dhe nga diaspora; testoni të dy segmentet para se të specializoheni.',
+      },
+      {
+        indicatorCode: 'population_growth',
+        direction: 'renia_mbeshtet',
+        mechanismSq:
+          'Në shumë vende, rënia e popullsisë pasqyron edhe emigracionin; çdo largim zakonisht kërkon dokumente të përkthyera, para dhe pas nisjes.',
+        ifSupportsSq:
+          'Rënia e popullsisë mund të sugjerojë emigracion aktiv dhe kërkesë për dokumente — por kjo është interpretim, sepse rënia mund të vijë edhe nga lindjet e pakta.',
+        ifContradictsSq:
+          'Me popullsi në rritje, kërkesa vjen më shumë nga studimet dhe biznesi sesa nga emigracioni; testoni ofertën te studentët.',
+      },
+      {
+        indicatorCode: 'internet_users_pct',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Kur shumica e njerëzve përdorin internetin, klientët në diasporë mund të dërgojnë dokumentet dhe të paguajnë online, pa ardhur fizikisht.',
+        ifSupportsSq: 'Përdorimi i lartë i internetit e mbështet modelin online dhe ul nevojën për zyrë fizike.',
+        ifContradictsSq: 'Me përdorim të ulët të internetit, shumë klientë do të kërkojnë takim fizik; planifikoni një pikë takimi me kosto të ulët.',
+      },
+    ],
+    whyItCouldWork: {
+      changeSq:
+        'Gjithnjë e më shumë njerëz studiojnë, punojnë ose bashkohen me familjen jashtë vendit, ndërsa institucionet kërkojnë dosje gjithnjë e më të detajuara.',
+      problemSq: 'Dokumentet që mungojnë, përkthimet e pasakta ose formatet e gabuara sjellin vonesa, tarifa të përsëritura dhe stres.',
+      customerSq: 'Studentë, punëtorë dhe familje që aplikojnë jashtë, si dhe persona në diasporë me dokumente në vendlindje.',
+      offerSq: 'Një pikë e vetme që përkthen, koordinon përkthimin zyrtar dhe e kontrollon dosjen sipas listës zyrtare.',
+      reasonToPaySq: 'Kursim kohe, më pak vajtje-ardhje nëpër zyra dhe qetësi që dosja është e plotë.',
+      profitConditionsSq:
+        'Fitimi kërkon një rrjedhë të qëndrueshme klientësh nga rekomandimet, shabllone për dokumentet që përsëriten dhe bashkëpunim të besueshëm me përkthyes të betuar dhe noterë.',
+    },
+    failureModes: [
+      {
+        kind: 'kerkese_e_pamjaftueshme',
+        textSq: 'Shumica e njerëzve e përgatisin vetë dosjen ose me ndihmën e të afërmve dhe paguajnë vetëm përkthimin zyrtar.',
+      },
+      {
+        kind: 'cmim',
+        textSq: 'Klientët e krahasojnë çmimin me zyrat e përkthimit që punojnë shumë lirë për faqe.',
+      },
+      {
+        kind: 'konkurrence',
+        textSq: 'Zyrat e përkthimit pranë noterëve dhe agjencitë për studime jashtë vendit që e përfshijnë dosjen në paketë.',
+      },
+      {
+        kind: 'kosto',
+        textSq: 'Koordinimi me noterë, përkthyes të betuar dhe korrierë kërkon më shumë kohë se vetë përkthimi.',
+      },
+      {
+        kind: 'ligjore',
+        textSq:
+          'Dhënia pa dashje e këshillave për imigracionin, ose një gabim në një dokument zyrtar, sjell përgjegjësi dhe humbje besimi.',
+      },
+      {
+        kind: 'sezonalitet',
+        textSq: 'Kërkesa grumbullohet para afateve të aplikimit dhe bie në vjeshtë.',
+      },
+      {
+        kind: 'operacionale',
+        textSq: 'Rrjedhja e të dhënave personale nga një email ose pajisje e pambrojtur dëmton klientët dhe biznesin.',
+      },
+    ],
+    falsifiersSq: [
+      'Nga 20 persona që kanë aplikuar jashtë vendit gjatë 2 viteve të fundit, më pak se 5 kanë pasur vonesë, refuzim ose shpenzim shtesë për shkak të dokumenteve.',
+      'Pas 15 ofertave me çmim konkret, më pak se 3 klientë paguajnë.',
+      'Koha reale për një aplikim mesatar kalon 5 orë, gjë që çmimi për faqe nuk e mbulon.',
+      'Asnjë përkthyes i betuar në zonë nuk pranon bashkëpunim me afate dhe çmime të qëndrueshme.',
+    ],
+    differentiationSq: [
+      'Listë kontrolli e personalizuar sipas listës zyrtare që klienti ka marrë nga institucioni pritës.',
+      'Ndarje e qartë: çfarë përkthejmë vetë, çfarë kërkon përkthyes të betuar dhe çfarë kërkon noter.',
+      'Ruajtje e enkriptuar dhe fshirje e dokumenteve pas përfundimit, e shkruar në marrëveshje.',
+      'Shërbim online për diasporën, me dorëzim të dosjes në vendlindje te një i afërm.',
+    ],
+    competitorTypesSq: [
+      'Zyra përkthimi pranë noterëve dhe gjykatave',
+      'Agjenci që ndërmjetësojnë studime ose punë jashtë vendit',
+      'Përkthyes freelancerë në platforma online',
+      'Të afërm që flasin gjuhën dhe e bëjnë falas',
+      'Mjete automatike përkthimi për dokumentet joformale',
+    ],
+    cheapestTestSq:
+      'Pesë kontrolle falas dosjesh për të njohur që po aplikojnë jashtë, të ndjekura nga 15 oferta me çmim për përkthimin dhe përgatitjen. Masni sa paguajnë, sa orë merr një aplikim dhe sa klientë vijnë nga rekomandimi.',
+    interviewQuestionsSq: [
+      'Kur aplikuat herën e fundit për studime, punë ose vizë, si i përgatitët dokumentet?',
+      'Sa ju kushtuan përkthimet dhe noterizimet herën e fundit?',
+      'Sa ditë ose vajtje nëpër zyra ju deshën për ta mbyllur dosjen?',
+      'Ju është kthyer ndonjëherë një aplikim për një dokument që mungonte ose ishte i gabuar? Çfarë ndodhi?',
+      'Kush ju ndihmoi dhe si e gjetët atë person ose zyrë?',
+      'Çfarë ju shqetësoi më shumë kur ia dorëzuat dokumentet tuaja personale dikujt tjetër?',
+      'Si i rregulloni sot dokumentet nga vendlindja kur jeni jashtë vendit?',
+    ],
+    firstCustomers: {
+      whereSq: [
+        'Të njohur, ish-shokë shkolle dhe të afërm që po aplikojnë për studime ose punë jashtë',
+        'Komunitete online të diasporës ku lejohet prezantimi i shërbimeve sipas rregullave të grupit',
+        'Klube studentësh dhe qendra rinore që organizojnë takime informuese, me lejen e organizatorëve',
+        'Përkthyes të betuar dhe noterë që kanë klientë me dosje të paplota (bashkëpunim për referime)',
+      ],
+      howToContactSq: [
+        'Prezantim i shkurtër, me lejen e organizatorit, në takime informuese për studime jashtë',
+        'Një postim informues në komunitetet e diasporës, pa mesazhe private masive',
+        'Rekomandime nga klientët e parë, pa vlerësime të rreme dhe pa zbritje në këmbim të vlerësimeve',
+      ],
+      offerSq: 'Kontroll falas i dosjes sipas listës zyrtare, pastaj ofertë me çmim për faqe dhe afat të shkruar.',
+      followUpSq:
+        'Një mesazh pas 5 ditësh nëse klienti nuk është përgjigjur; pas aplikimit, pyetni nëse dosja u pranua pa vërejtje — pa kërkuar vlerësime në këmbim të zbritjeve.',
+      metricsSq: [
+        'Kontrolle falas → klientë që paguajnë (%)',
+        'Orë pune për aplikim',
+        'Dosje të kthyera për mungesa (%)',
+        'Klientë që vijnë nga rekomandimi (%)',
+      ],
+    },
+    pitchTemplateSq:
+      'Përshëndetje [emri], jam [emri] dhe ndihmoj persona që aplikojnë për [studime ose punë] në [vendi pritës] të përgatisin dokumentet. E kontrolloj dosjen sipas listës zyrtare që ju ka dhënë institucioni, përkthej CV-në dhe letrat, dhe koordinoj përkthimin zyrtar me përkthyes të betuar kur kërkohet. Nuk jap këshilla ligjore për vizën. Mund ta kontrolloj falas dosjen tuaj, që të shihni çfarë mungon.',
+    offerTemplateSq:
+      'Oferta për [emri i klientit]: (1) kontroll i dosjes sipas listës zyrtare të [institucioni]; (2) përkthim i [numri] faqeve joformale në [gjuha]; (3) koordinim i përkthimit zyrtar me përkthyes të betuar dhe i noterizimit, me koston reale që e paguani ju; (4) dosje përfundimtare në [letër ose PDF] deri më [data]. Çmimi: [çmimi] për faqe, pagesë para dorëzimit. Dokumentet ruhen të enkriptuara dhe fshihen [numri] ditë pas përfundimit. Nuk premtojmë miratimin e aplikimit dhe nuk japim këshilla ligjore; premtojmë dosje të plotë sipas listës dhe përkthime të sakta.',
+    feedbackQuestionsSq: [
+      'A u pranua dosja pa kërkesa për dokumente shtesë?',
+      'Cila pjesë e procesit ju mori më shumë kohë?',
+      'A u ndjetë të qetë për mënyrën si u ruajtën dokumentet tuaja?',
+      'Kujt tjetër që po aplikon do t’ia përmendnit këtë shërbim?',
+    ],
+    goCriteriaSq: [
+      'Të paktën 5 klientë që paguajnë në 2 muajt e parë pas 15 ofertave.',
+      'Koha mesatare për aplikim nën 3 orë dhe asnjë dosje e kthyer për gabim tonin.',
+    ],
+    killCriteriaSq: [
+      'Pas 30 kontakteve dhe 15 ofertave, më pak se 3 klientë me pagesë.',
+      'Më shumë se gjysma e kërkesave kërkojnë këshilla ligjore ose imigracioni që nuk mund t’i jepni.',
+      'Të ardhurat për orë, pas kostove, mbeten nën pagën minimale që ju nevojitet pas 4 muajsh.',
+    ],
+    phaseNotesSq: {
+      p10_20: [
+        'Intervistoni 20 persona që kanë aplikuar jashtë vendit gjatë 2 viteve të fundit dhe 5 persona në diasporë për problemet me dokumentet.',
+      ],
+      p40_50: [
+        'Verifikoni cilat përkthime kërkojnë përkthyes të betuar në vendet pritëse më të zakonshme dhe çfarë lejohet pa licencë ligjore ose imigracioni.',
+      ],
+      p50_60: [
+        'Gjeni 2 përkthyes të betuar dhe 1 noter me afate dhe çmime të shkruara; ngrini ruajtjen e enkriptuar dhe procedurën e fshirjes.',
+      ],
+      p60_70: ['Pilot me 5 dosje reale; matni orët, kohën e pritjes te palët e treta dhe vërejtjet e institucioneve.'],
+    },
+    assumptionsSq: [
+      'Shumica e aplikimeve kërkojnë rreth 4–8 faqe përkthimi dhe një kontroll dosjeje.',
+      'Tarifat e përkthyesit të betuar dhe të noterit i kalojnë klientit me koston reale.',
+      'Klientët paguajnë para dorëzimit (0 ditë arkëtim).',
+      'Rekomandimet nga klientët e kënaqur janë burimi kryesor i klientëve të rinj.',
+    ],
+    sourcesNoteSq:
+      'Çmimet dhe kostot janë supozime të përgjithshme të bibliotekës në USD, jo çmime të verifikuara për ndonjë vend. Treguesit makro vijnë nga burimet e regjistrit me datë dhe periudhë.',
+    assumptionsDate: '2026-10-02',
+  },
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 8. IT support subscription for small offices — remote + on-site, solo, B2B with
+  //    30-day invoices; client data access, electrical work only by licensed electricians
+  // ───────────────────────────────────────────────────────────────────────────
+  {
+    id: 'mbeshtetje-it-per-zyra-te-vogla',
+    nameSq: 'Mbështetje IT me abonim për zyra të vogla',
+    taglineSq: 'Kopje rezervë që testohen, rrjet që punon dhe pajisje të përditësuara — me një çmim mujor të parashikueshëm.',
+    descriptionSq:
+      'Shërbim mujor për zyra me 3–20 persona (zyra profesionale, klinika jo-mjekësore, agjenci, dyqane me zyrë) që nuk kanë person IT dhe thërrasin dikë vetëm kur prishet diçka. Përfshin kopje rezervë të automatizuara dhe të testuara, përditësime të sistemeve dhe të programeve, kujdes për rrjetin dhe printerët, menaxhim të llogarive dhe të fjalëkalimeve, higjienë bazë sigurie (verifikim me dy hapa, antivirus, trajnim i shkurtër kundër mashtrimeve me email) dhe ndihmë në distancë ose në vend. Punët në instalimet elektrike u lihen elektricistëve të licencuar.',
+    sector: 'digjitale',
+    offerSq:
+      'Abonim mujor për zyrë (deri në 10 pajisje): kopje rezervë ditore me test rikthimi çdo muaj, përditësime dhe monitorim në distancë, ndihmë në distancë brenda 4 orëve pune, një vizitë në vend në muaj, inventar i pajisjeve dhe i licencave, verifikim me dy hapa për email-et dhe një trajnim 30-minutësh çdo tremujor për stafin kundër mashtrimeve online.',
+    payingCustomerSq: 'Pronari ose menaxheri i një zyre me 3–20 persona që varet çdo ditë nga kompjuterët, email-i dhe interneti.',
+    customerSegments: ['b2b'],
+    problemSq:
+      'Zyrat e vogla humbasin orë pune kur bie interneti, printeri ose një kompjuter, rrezikojnë humbjen e të dhënave sepse kopjet rezervë nuk ekzistojnë ose nuk janë provuar kurrë, dhe janë të ekspozuara ndaj mashtrimeve me email; askush në zyrë nuk e ka këtë si punë të vetën.',
+    modes: ['kombinuar', 'online'],
+    marketScopes: ['lokal'],
+    canStartFromHome: true,
+    minTeam: 'vetem',
+    requiredSkills: ['it_mbeshtetje'],
+    helpfulSkills: ['programim', 'sherbim_klienti', 'shitje', 'administrim'],
+    helpfulAssets: ['kompjuter', 'internet_i_qendrueshem', 'telefon_smart', 'automjet', 'motor_bicikleta', 'rrjet_kontaktesh'],
+    minHoursPerWeek: 15,
+    regulated: false,
+    regulationNotesSq: [
+      'Do të keni qasje në të dhënat e klientëve: nënshkruani marrëveshje me shkrim për përpunimin dhe konfidencialitetin e të dhënave dhe verifikoni rregullat lokale të mbrojtjes së të dhënave. Kërkon verifikim lokal.',
+      'Disa klientë (p.sh. zyra që trajtojnë të dhëna shëndetësore ose financiare) mund të kenë detyrime të veçanta për sigurinë e të dhënave; pyesni dhe verifikoni para se të merrni përsipër përgjegjësinë.',
+      'Licencat e programeve: instaloni vetëm programe me licencë të vlefshme dhe mbani inventar; mos instaloni kopje pa licencë.',
+      'Punimet në instalimet elektrike (priza të reja, panele, kabllo brenda murit) i bën vetëm elektricist i licencuar.',
+      'Regjistrimi i aktivitetit, faturimi dhe sigurimi i përgjegjësisë profesionale për humbje të dhënash: Kërkon verifikim lokal.',
+    ],
+    licensedProfessionalsSq: ['Elektricist i licencuar për çdo punim në instalimet elektrike ose për priza dhe linja të reja'],
+    adultOnly: false,
+    zeroCapitalTestSq:
+      'Me kompjuterin që keni dhe mjete falas: ofroni 5 zyrave të njohura një kontroll falas 1-orësh (a ka kopje rezervë dhe a funksionon rikthimi, a janë përditësuar pajisjet, a përdoret verifikimi me dy hapa) dhe u lini një raport njëfaqësh me 3 rreziqet kryesore. Pastaj u bëni ofertë me çmim për abonimin mujor. Kostoja reale: transporti dhe koha juaj; gjatë kontrollit mos ndryshoni asgjë në sistemet e tyre pa leje me shkrim. Hapësira për kopjet rezervë dhe licencat e monitorimit paguhen vetëm pasi klienti ta ketë pranuar ofertën.',
+    revenueModelSq:
+      'Abonim mujor fiks për zyrë (njësia = 1 abonim/muaj), me nivel çmimi sipas numrit të pajisjeve. Projektet e veçanta (zhvendosje zyre, rrjet i ri, blerje pajisjesh) faturohen veçmas dhe nuk përfshihen në modelin bazë.',
+    pricing: {
+      unitLabelSq: 'abonim mujor për zyrë',
+      priceUSD: { low: 150, base: 300, high: 600 },
+      variableCostUSD: { low: 15, base: 35, high: 70 },
+      unitsPerCustomerPerMonth: 1,
+      collectionDays: 30,
+      supplierPaymentDays: 0,
+      noteSq:
+        'Kostoja variabël përfshin hapësirën për kopjet rezervë në re, licencat e monitorimit dhe të ndihmës në distancë për çdo pajisje dhe mjetet e sigurisë; rritet me numrin e pajisjeve. Çmimet janë supozime në USD; verifikoni sa paguajnë sot zyrat për thirrje të rastësishme IT dhe kërkoni ofertat e 2–3 firmave IT lokale.',
+    },
+    startupCosts: [
+      {
+        id: 'laptop',
+        labelSq: 'Laptop pune',
+        category: 'pajisje',
+        lowUSD: 500,
+        highUSD: 1100,
+        noteSq: 'Nevojitet vetëm nëse nuk keni kompjuter; duhet të përballojë mjetet e menaxhimit në distancë dhe makina virtuale për prova.',
+        scalesWithPriceLevel: false,
+        optional: true,
+        avoidedByAssets: ['kompjuter'],
+      },
+      {
+        id: 'diagnostic-kit',
+        labelSq: 'Vegla rrjeti dhe diagnostikimi (testues kabllosh, disqe USB, kabllo, përshtatës)',
+        category: 'pajisje',
+        lowUSD: 100,
+        highUSD: 400,
+        noteSq: 'Blini fillimisht veglat për problemet më të shpeshta (rrjet, disqe, printerë) dhe shtoni të tjerat sipas kërkesave reale.',
+        scalesWithPriceLevel: false,
+      },
+      {
+        id: 'spare-parts',
+        labelSq: 'Stok i vogël pjesësh (memorie, disqe SSD, ruter rezervë)',
+        category: 'inventar',
+        lowUSD: 150,
+        highUSD: 600,
+        noteSq: 'Ju lejon ta zgjidhni problemin në të njëjtën vizitë; nisni me pak copa dhe faturojini te klienti kur përdoren.',
+        scalesWithPriceLevel: false,
+        optional: true,
+      },
+      {
+        id: 'certification',
+        labelSq: 'Kurs ose certifikim në rrjete ose në siguri',
+        category: 'hapje',
+        lowUSD: 0,
+        highUSD: 400,
+        noteSq: 'Jo i detyrueshëm, por i jep besim klientit; ka kurse cilësore falas ose me kosto të ulët, krahasojini para se të paguani.',
+        scalesWithPriceLevel: false,
+        optional: true,
+      },
+      {
+        id: 'registration-fees',
+        labelSq: 'Regjistrim aktiviteti dhe faturim',
+        category: 'tarifa',
+        lowUSD: 0,
+        highUSD: 200,
+        noteSq: 'Tarifat ndryshojnë sipas vendit dhe formës ligjore; merrni shumën e saktë nga regjistri zyrtar i bizneseve.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'market-test',
+        labelSq: 'Test tregu: 5 kontrolle falas, raporte të printuara dhe transport',
+        category: 'testim_tregu',
+        lowUSD: 30,
+        highUSD: 120,
+        noteSq: 'Transport për kontrollet falas, printim i raporteve njëfaqëshe dhe i ofertës, dhe licenca provë për mjetet e kopjeve rezervë.',
+        scalesWithPriceLevel: true,
+      },
+    ],
+    monthlyFixedCosts: [
+      {
+        id: 'rmm-tools',
+        labelSq: 'Platformë menaxhimi në distancë, sistem kërkesash dhe menaxher fjalëkalimesh',
+        category: 'software',
+        lowUSD: 20,
+        highUSD: 80,
+        noteSq: 'Pjesa fikse e mjeteve; licencat për çdo pajisje janë te kostoja variabël. Shumë ofrues kanë plane të vogla për fillestarët.',
+        scalesWithPriceLevel: false,
+      },
+      {
+        id: 'professional-insurance',
+        labelSq: 'Sigurim i përgjegjësisë profesionale dhe për humbje të dhënash',
+        category: 'sigurime',
+        lowUSD: 20,
+        highUSD: 90,
+        noteSq: 'Mbulon dëmin nga një gabim konfigurimi ose humbje të dhënash; pyesni 2–3 agjenci çfarë përjashtojnë saktësisht.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'phone-internet',
+        labelSq: 'Telefon dhe internet pune',
+        category: 'sherbime_komunale',
+        lowUSD: 15,
+        highUSD: 50,
+        noteSq: 'Ndihma në distancë kërkon internet të qëndrueshëm dhe një numër telefoni pune; verifikoni paketat e operatorëve lokalë.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'local-transport',
+        labelSq: 'Transport për vizitat në vend',
+        category: 'transport',
+        lowUSD: 20,
+        highUSD: 100,
+        noteSq: 'Varet nga distanca mes zyrave; grupimi i klientëve në një zonë dhe ndihma në distancë e ulin këtë kosto.',
+        scalesWithPriceLevel: true,
+      },
+      {
+        id: 'bookkeeping',
+        labelSq: 'Kontabilist i jashtëm',
+        category: 'kontabilitet',
+        lowUSD: 0,
+        highUSD: 80,
+        noteSq: 'Në disa vende aktiviteti i vogël mund ta mbajë vetë kontabilitetin; verifikoni detyrimet lokale.',
+        scalesWithPriceLevel: true,
+        optional: true,
+      },
+    ],
+    ramp: {
+      konservator: { startCustomers: 0, monthlyNewCustomers: 1, monthlyChurnPct: 4 },
+      baze: { startCustomers: 1, monthlyNewCustomers: 1, monthlyChurnPct: 3 },
+      optimist: { startCustomers: 2, monthlyNewCustomers: 2, monthlyChurnPct: 2 },
+    },
+    seasonality: [1, 1, 1, 1, 1, 1, 0.98, 0.96, 1.02, 1.02, 1, 1.02],
+    seasonalityNoteSq:
+      'Abonimet janë të qëndrueshme gjatë vitit, prandaj kurba është pothuajse e sheshtë; ulja e vogël në verë pasqyron zyrat që mbyllen për pushime dhe kërkojnë pezullim ose zbritje. Hipotezë: shitjet e reja janë më të lehta në shtator dhe në janar.',
+    macroLinks: [
+      {
+        indicatorCode: 'internet_users_pct',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Kur interneti përdoret gjerësisht, zyrat e vogla i kalojnë faturat, komunikimin dhe pagesat në sisteme digjitale — dhe çdo ndërprerje kushton më shumë.',
+        ifSupportsSq: 'Përdorimi i lartë i internetit sugjeron zyra më të varura nga teknologjia dhe më shumë nevojë për kujdes të rregullt.',
+        ifContradictsSq:
+          'Me përdorim të ulët të internetit, shumë zyra punojnë ende me letër; nisni me shërbime bazë (kopje rezervë, email) dhe testoni kërkesën.',
+      },
+      {
+        indicatorCode: 'services_va_gdp',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Zyrat e shërbimeve (kontabilitet, avokati, agjenci, klinika jo-mjekësore) janë klientët kryesorë dhe janë më të shumta në ekonomitë ku shërbimet zënë peshë të madhe.',
+        ifSupportsSq: 'Pesha e lartë e shërbimeve sugjeron më shumë zyra të vogla në zonë (duhet konfirmuar me numërim lokal).',
+        ifContradictsSq: 'Me peshë të ulët të shërbimeve, zyrat janë më të pakta; shikoni edhe punishtet dhe dyqanet me disa kompjuterë.',
+      },
+      {
+        indicatorCode: 'new_business_density',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq: 'Bizneset e reja duhet të ngrenë nga e para email-in, rrjetin dhe kopjet rezervë, shpesh pa person IT.',
+        ifSupportsSq: 'Dendësia e lartë e bizneseve të reja sugjeron klientë që mund ta nisin mirë që në fillim me një abonim.',
+        ifContradictsSq: 'Me pak biznese të reja, klientët vijnë nga zyrat ekzistuese që kanë zakone të vjetra; prisni cikle shitjeje më të gjata.',
+      },
+      {
+        indicatorCode: 'gdp_per_capita_ppp',
+        direction: 'me_i_larte_mbeshtet',
+        mechanismSq:
+          'Kur të ardhurat dhe pagat janë më të larta, një orë pune e humbur për shkak të një kompjuteri të prishur kushton më shumë dhe zyrat paguajnë më lehtë për parandalim.',
+        ifSupportsSq: 'Të ardhurat më të larta e bëjnë më të lehtë shitjen e kujdesit parandalues me abonim.',
+        ifContradictsSq:
+          'Me të ardhura të ulëta, zyrat paguajnë vetëm kur prishet diçka; ofroni një paketë minimale me kopje rezervë dhe tarifë për thirrje.',
+      },
+    ],
+    whyItCouldWork: {
+      changeSq:
+        'Edhe zyrat më të vogla tani varen tërësisht nga email-i, programet në re, interneti dhe pajisjet, ndërsa mashtrimet online janë shtuar.',
+      problemSq: 'Kur prishet diçka, puna ndalet; kur humbasin të dhënat, shpesh nuk ka kopje rezervë që funksionon.',
+      customerSq: 'Zyra me 3–20 persona pa staf IT, ku dikush “që merr vesh pak” e bën këtë punë krahas detyrës së vet.',
+      offerSq: 'Kujdes parandalues me çmim mujor: kopje rezervë të testuara, përditësime, siguri bazë dhe ndihmë e shpejtë.',
+      reasonToPaySq: 'Më pak orë pune të humbura, më pak rrezik për humbje të dhënash dhe një person përgjegjës për gjithçka teknike.',
+      profitConditionsSq:
+        'Fitimi kërkon procese standarde dhe mjete në distancë që një person të shërbejë 10–20 zyra, kufi të qartë të shërbimit dhe pagesa të rregullta brenda 30 ditëve.',
+    },
+    failureModes: [
+      {
+        kind: 'kerkese_e_pamjaftueshme',
+        textSq: 'Zyrat preferojnë të paguajnë vetëm kur prishet diçka dhe nuk e shohin vlerën e parandalimit.',
+      },
+      {
+        kind: 'cmim',
+        textSq: 'Çmimi që pranojnë zyrat nuk mbulon orët reale, sidomos kur pajisjet janë të vjetra dhe të ndryshme nga njëra-tjetra.',
+      },
+      {
+        kind: 'konkurrence',
+        textSq: 'Firma IT më të mëdha, teknikë informalë me thirrje të lira dhe të afërm që e bëjnë falas.',
+      },
+      {
+        kind: 'kosto',
+        textSq: 'Licencat për pajisje dhe hapësira për kopjet rezervë rriten më shpejt se çmimi i abonimit.',
+      },
+      {
+        kind: 'vonesa_pagesash',
+        textSq: 'Zyrat e vogla vonojnë faturat mujore, sidomos në muajt kur “nuk ka pasur probleme”.',
+      },
+      {
+        kind: 'operacionale',
+        textSq: 'Një incident i madh (program keqdashës, humbje të dhënash) te një klient zë gjithë javën dhe vonon të tjerët.',
+      },
+      {
+        kind: 'aftesi',
+        textSq:
+          'Pa njohuri të përditësuara sigurie, kopjet rezervë dhe konfigurimet mund të kenë boshllëqe që zbulohen vetëm kur është vonë.',
+      },
+    ],
+    falsifiersSq: [
+      'Nga 15 zyra të kontrolluara falas, më pak se 5 kanë kopje rezervë që mungojnë, nuk funksionojnë ose nuk janë provuar.',
+      'Pas 15 ofertave me çmim konkret, më pak se 2 zyra pranojnë abonimin mujor.',
+      'Pas 3 muajsh, koha mesatare për zyrë kalon 6 orë në muaj me çmimin bazë.',
+      'Zyrat e intervistuara nuk kujtojnë asnjë ndërprerje pune ose humbje të dhënash gjatë vitit të fundit.',
+    ],
+    differentiationSq: [
+      'Test i dokumentuar i rikthimit të kopjes rezervë çdo muaj, jo vetëm “kopje që ekzistojnë”.',
+      'Raport mujor i thjeshtë për pronarin: çfarë u bë, çfarë rreziku mbetet dhe çfarë duhet zëvendësuar së shpejti.',
+      'Afat i shkruar reagimi dhe inventar i plotë i pajisjeve dhe i licencave që i mbetet klientit.',
+      'Trajnim i shkurtër periodik i stafit kundër mashtrimeve me email.',
+    ],
+    competitorTypesSq: [
+      'Firma IT që shërbejnë kryesisht kompani të mëdha',
+      'Teknikë të pavarur që thirren vetëm kur prishet diçka',
+      'Dyqane kompjuterash që ofrojnë riparime',
+      'Një punonjës i zyrës që “merr vesh” dhe e bën krahas punës së vet',
+    ],
+    cheapestTestSq:
+      'Kontroll falas 1-orësh për 5 zyra me raport të 3 rreziqeve kryesore, i ndjekur nga 15 oferta me çmim për abonimin. Masni sa zyra kanë kopje rezervë që nuk funksionojnë dhe sa paguajnë muajin e parë.',
+    interviewQuestionsSq: [
+      'Kur ishte hera e fundit që puna në zyrë u ndal për shkak të internetit, kompjuterit ose printerit?',
+      'Kush e zgjidhi problemin dhe sa kohë u desh?',
+      'Si i ruani sot kopjet rezervë dhe kur keni provuar herën e fundit t’i riktheni?',
+      'Sa paguat vitin e kaluar për ndihmë IT, pajisje dhe programe?',
+      'Keni marrë ndonjëherë një email mashtrues që dukej i vërtetë? Çfarë ndodhi?',
+      'Kush i ka sot fjalëkalimet e email-eve dhe të ruterit?',
+      'Kush tjetër vendos për shpenzimet teknike në zyrë?',
+    ],
+    firstCustomers: {
+      whereSq: [
+        'Zyra profesionale në lagjen tuaj (kontabilistë, avokatë, agjenci, klinika jo-mjekësore)',
+        'Biznese ku keni punuar ose ku e njihni pronarin',
+        'Dyqane kompjuterash që nuk ofrojnë mirëmbajtje mujore (bashkëpunim për referime)',
+        'Shoqatat lokale të biznesit dhe takimet e dhomave të tregtisë',
+      ],
+      howToContactSq: [
+        'Vizitë personale në orë të qeta, me ofertën për kontrollin falas 1-orësh',
+        'Rekomandime nga zyrat pilot, pa lista të blera dhe pa mesazhe masive',
+        'Prezantim i shkurtër për sigurinë e email-it në takimet e shoqatave të biznesit, me lejen e organizatorëve',
+      ],
+      offerSq: 'Kontroll falas 1-orësh me raport, pastaj abonim mujor pa detyrim afatgjatë (anulim me njoftim 30-ditor).',
+      followUpSq:
+        'Dërgoni raportin brenda 24 orëve; një rikujtesë e vetme pas 7 ditësh, pastaj ndaloni nëse nuk ka interes. Shënoni çdo kontakt në një tabelë.',
+      metricsSq: [
+        'Kontrolle falas → abonime me pagesë (%)',
+        'Orë pune për zyrë në muaj',
+        'Kërkesa të zgjidhura brenda afatit (%)',
+        'Teste rikthimi që kalojnë me sukses (%)',
+        'Zyra që anulojnë në 6 muajt e parë',
+      ],
+    },
+    pitchTemplateSq:
+      'Përshëndetje [emri], jam [emri] dhe kujdesem për kompjuterët, rrjetin dhe kopjet rezervë të zyrave të vogla në [zona]. Mund të bëj falas një kontroll 1-orësh në zyrën tuaj — p.sh. nëse kopjet rezervë rikthehen vërtet kur ju duhen — dhe t’ju lë një faqe me 3 rreziqet kryesore që gjej. Nëse ju duket e dobishme, ofroj kujdes të rregullt për [çmimi] në muaj.',
+    offerTemplateSq:
+      'Oferta për [emri i zyrës]: (1) kopje rezervë ditore me test rikthimi çdo muaj; (2) përditësime dhe monitorim në distancë për [numri] pajisje; (3) ndihmë në distancë brenda [numri] orëve pune dhe [numri] vizita në vend në muaj; (4) inventar i pajisjeve dhe i licencave; (5) trajnim 30-minutësh çdo tremujor për stafin. Çmimi: [çmimi] në muaj, pagesë brenda 30 ditëve nga fatura. Anulim me njoftim 30-ditor; fjalëkalimet dhe inventari ju dorëzohen në çdo rast. Asnjë sistem nuk është plotësisht i mbrojtur; premtojmë kujdes të rregullt, afate reagimi dhe raportim të ndershëm.',
+    feedbackQuestionsSq: [
+      'Sa herë u ndal puna këtë muaj për probleme teknike, krahasuar me më parë?',
+      'A u respektuan afatet e reagimit?',
+      'A e kuptoni raportin mujor pa terma teknikë?',
+      'Çfarë ju shqetëson ende në anën teknike të zyrës?',
+    ],
+    goCriteriaSq: [
+      'Të paktën 3 zyra paguajnë muajin e parë pas 15 ofertave.',
+      'Koha mesatare për zyrë mbetet nën 4 orë në muaj pas muajit të dytë.',
+    ],
+    killCriteriaSq: [
+      'Pas 30 kontakteve dhe 15 ofertave, më pak se 2 abonime me pagesë.',
+      'Më shumë se gjysma e klientëve kërkojnë vetëm thirrje të rastësishme dhe refuzojnë abonimin.',
+      'Çmimi i pranuar nuk mbulon licencat, transportin dhe pagën minimale që ju nevojitet edhe me 15 zyra.',
+    ],
+    phaseNotesSq: {
+      p10_20: [
+        'Bëni 10–15 kontrolle falas dhe dokumentoni gjendjen e kopjeve rezervë, të përditësimeve dhe të fjalëkalimeve para intervistave.',
+      ],
+      p30_40: ['Llogaritni koston e licencave për pajisje dhe vendosni çmime sipas numrit të pajisjeve, jo vetëm për zyrë.'],
+      p40_50: ['Përgatitni marrëveshjen e përpunimit të të dhënave dhe verifikoni sigurimin për humbje të dhënash.'],
+      p50_60: ['Ngrini listat e kontrollit për pranimin e një klienti të ri, inventarin dhe procedurën për incidentet.'],
+      p60_70: ['Pilot me 3 zyra për 2 muaj; matni orët për zyrë dhe numrin e kërkesave.'],
+    },
+    assumptionsSq: [
+      'Një person mund të shërbejë 10–20 zyra të vogla me mjete në distancë dhe procese standarde.',
+      'Zyrat pranojnë faturim mujor dhe paguajnë brenda 30 ditëve.',
+      'Licencat për pajisje mbeten nën 20% të çmimit të abonimit.',
+      'Interesi pas kontrollit falas nuk është provë; vetëm pagesa e muajit të parë konfirmon kërkesën.',
+    ],
+    sourcesNoteSq:
+      'Çmimet dhe kostot janë supozime të përgjithshme të bibliotekës në USD, jo çmime të verifikuara për ndonjë vend. Treguesit makro vijnë nga burimet e regjistrit me datë dhe periudhë.',
+    assumptionsDate: '2026-10-02',
+  },
 ];
