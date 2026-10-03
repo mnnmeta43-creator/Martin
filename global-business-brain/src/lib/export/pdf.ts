@@ -16,7 +16,9 @@ import {
   ASSUMPTIONS_NOT_GUARANTEES_SQ,
   breakEvenSq,
   categoryLabelSq,
+  citationUnitSq,
   cityLabelSq,
+  completionPctSq,
   COST_SOURCE_LABELS_SQ,
   DEMO_BANNER_SQ,
   DEMO_WARNING_SQ,
@@ -351,7 +353,7 @@ function coverSection({ p, input }: Section): void {
   keyValue(p, 'Të dhënat e ruajtura më', formatDateTime(project.dataSnapshot.capturedAt));
   keyValue(p, 'Gjeneruar më', formatDateTime(input.generatedAt));
   keyValue(p, 'Monedha', project.financialInputs.currency);
-  keyValue(p, 'Përfundimi i planit', `${formatNumber(progress.completionPct, 0)}% (${progress.completedTasks} nga ${progress.totalTasks} detyra)`);
+  keyValue(p, 'Përfundimi i planit', `${completionPctSq(progress.completionPct)} (${progress.completedTasks} nga ${progress.totalTasks} detyra)`);
   p.doc.y += 14;
   box(p, PLAN_DISCLAIMER_SQ, { fill: COLOR.soft, color: COLOR.text, font: FONT.bold, size: 11, border: COLOR.accent });
 }
@@ -411,7 +413,7 @@ function summarySection(section: Section): void {
 function progressSection({ p, input }: Section): void {
   const { progress, plan } = input;
   heading(p, 'Progresi i planit');
-  para(p, `Përfundimi i planit: ${formatNumber(progress.completionPct, 0)}% (${progress.completedTasks} nga ${progress.totalTasks} detyra)`, {
+  para(p, `Përfundimi i planit: ${completionPctSq(progress.completionPct)} (${progress.completedTasks} nga ${progress.totalTasks} detyra)`, {
     font: FONT.bold,
   });
   progressBar(p, progress.completionPct);
@@ -421,7 +423,7 @@ function progressSection({ p, input }: Section): void {
     return [
       phase.rangeLabel || PHASE_TITLES[phase.id]?.range || phase.id,
       phase.titleSq,
-      stats ? `${formatNumber(stats.completionPct, 0)}%` : '—',
+      stats ? completionPctSq(stats.completionPct) : '—',
       stats ? `${stats.done} / ${stats.total}` : '—',
     ];
   });
@@ -439,7 +441,7 @@ function phasesSection({ p, input }: Section): void {
     if (index > 0) rule(p);
     ensureSpace(p, 90);
     para(p, `${range} · ${phase.titleSq}`, { font: FONT.bold, size: 13, color: COLOR.accent, gapAfter: 2 });
-    para(p, `Përfundimi i fazës: ${pct === undefined ? '—' : `${formatNumber(pct, 0)}%`}`, { size: 9, color: COLOR.muted, gapAfter: 4 });
+    para(p, `Përfundimi i fazës: ${completionPctSq(pct)}`, { size: 9, color: COLOR.muted, gapAfter: 4 });
     para(p, 'Veprimet', { font: FONT.bold, size: 10, gapAfter: 2 });
     bullets(p, phase.actionsSq, 9.5);
     keyValue(p, 'Rezultati', phase.outputSq);
@@ -451,10 +453,11 @@ function phasesSection({ p, input }: Section): void {
   });
 }
 
+// The plan's horizons are cumulative (d30 ⊇ d7); later lists show only tasks not listed above.
 const HORIZONS: { key: 'd7' | 'd30' | 'd90'; titleSq: string }[] = [
   { key: 'd7', titleSq: '7 ditët e para' },
-  { key: 'd30', titleSq: '30 ditët e para' },
-  { key: 'd90', titleSq: '90 ditët e para' },
+  { key: 'd30', titleSq: '30 ditët e para (përveç atyre më sipër)' },
+  { key: 'd90', titleSq: '90 ditët e para (përveç atyre më sipër)' },
 ];
 
 function tasksSection({ p, input }: Section): void {
@@ -465,11 +468,15 @@ function tasksSection({ p, input }: Section): void {
     'Katror bosh = për t’u bërë · katror me shenjë = përfunduar · katror gjysmë i mbushur = në progres · katror me vijë = anashkaluar.',
     { size: 9, color: COLOR.muted, gapAfter: 8 },
   );
+  const shown = new Set<string>();
   for (const horizon of HORIZONS) {
     subheading(p, horizon.titleSq);
-    const tasks = horizonTasks(input, horizon.key);
-    if (tasks.length === 0) para(p, 'Nuk ka detyra për këtë periudhë.', { color: COLOR.muted });
-    for (const task of tasks) checkboxItem(p, task);
+    const tasks = horizonTasks(input, horizon.key).filter((task) => !shown.has(task.id));
+    if (tasks.length === 0) para(p, 'Nuk ka detyra të tjera për këtë periudhë.', { color: COLOR.muted });
+    for (const task of tasks) {
+      shown.add(task.id);
+      checkboxItem(p, task);
+    }
     p.doc.y += 6;
   }
 }
@@ -532,7 +539,8 @@ function assumptionsSection({ p, input, money }: Section): void {
 
 function citationLines(input: ExportInput): { title: string; detail: string }[] {
   return input.citations.map((c) => {
-    const value = typeof c.value === 'number' && Number.isFinite(c.value) ? `${formatNumber(c.value)}${c.unitLabelSq ? ` ${c.unitLabelSq}` : ''}` : 'mungon';
+    const unit = citationUnitSq(c);
+    const value = typeof c.value === 'number' && Number.isFinite(c.value) ? `${formatNumber(c.value)}${unit ? ` ${unit}` : ''}` : 'mungon';
     const flags = [c.isDemo ? 'DEMO — fiktive' : '', c.isProjection ? 'parashikim, jo matje' : ''].filter(Boolean).join(', ');
     const detail = [
       `Vendi: ${c.countryCode ?? '—'} · Periudha: ${c.period ? formatPeriod(c.period) : '—'} · Vlera: ${value}${flags ? ` (${flags})` : ''}`,

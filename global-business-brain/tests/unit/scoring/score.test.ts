@@ -1,3 +1,4 @@
+// SYNTHETIC — format mirrors the documented API; values are not real
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { CountryDataContext, DimensionScore, EvidenceEntry, ProjectionResult, ScoreWeights } from '@/lib/domain/types';
 import { DEFAULT_SCORE_WEIGHTS } from '@/lib/domain/taxonomy';
@@ -199,6 +200,12 @@ describe('scoreIdea', () => {
     const shifted = scoreIdea(input({ weights: { ...DEFAULT_SCORE_WEIGHTS, veshtiresia: 35, aftesite: 0 } }));
     expect(shifted.total).not.toBe(a.total);
     expect(combineScore(a.dimensions, shifted.weights).total).toBe(shifted.total);
+  });
+
+  it('notes when the idea is blocked by the profile', () => {
+    const fit = { matchesSq: [], mismatchesSq: [], blockersSq: ['Pengesë testi'], capitalGap: null, eligible: false };
+    expect(scoreIdea(input({ fit })).noteSq).toContain('pengesa nga profili');
+    expect(scoreIdea(input()).noteSq).not.toContain('pengesa');
   });
 
   it('normalizes invalid weights instead of failing', () => {

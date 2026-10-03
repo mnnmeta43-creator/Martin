@@ -1,3 +1,4 @@
+// SYNTHETIC — format mirrors the documented API; values are not real
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { CountryDataContext, IdeaRecommendation } from '@/lib/domain/types';
 import { ARCHETYPES } from '@/lib/ideas/archetypes';
@@ -100,11 +101,12 @@ describe('evaluateIdea', () => {
     expect((dim(withPaid, 'kerkesa')?.score ?? 0) > (dim(base, 'kerkesa')?.score ?? 0)).toBe(true);
   });
 
-  it('is deterministic for the same inputs and passes the target city through', () => {
-    const p = testProfile({ targetCity: 'Qytet testi' });
+  it('is deterministic for the same inputs and passes the target city only to a target country', () => {
+    const p = testProfile({ targetCity: 'Qytet testi', targetCountries: ['ALB'] });
     const a = evaluateIdea(IDEAS_ARCHETYPE, p, synthetic, { now: NOW });
     expect(evaluateIdea(IDEAS_ARCHETYPE, p, synthetic, { now: NOW })).toEqual(a);
     expect(a.city).toBe('Qytet testi');
+    expect(evaluateIdea(IDEAS_ARCHETYPE, p, demo, { now: NOW }).city).toBeUndefined();
   });
 
   it('the detailed variant exposes the inputs and projection behind the numbers', () => {

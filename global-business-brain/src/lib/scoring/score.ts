@@ -24,7 +24,7 @@ import type {
 } from '@/lib/domain/types';
 import { DEFAULT_SCORE_WEIGHTS, SCORE_DIMENSION_LABELS } from '@/lib/domain/taxonomy';
 import { formatIndicatorValue, formatNumber, formatPercent, formatPeriod } from '@/lib/finance/format';
-import { macroClaimStance } from '@/lib/ideas/claims';
+import { HIGH_INFLATION_PCT, HIGH_LENDING_RATE_PCT, macroClaimStance } from '@/lib/ideas/claims';
 import { sameCurrency } from '@/lib/ideas/fit';
 
 export const SCORE_DIMENSION_IDS: readonly ScoreDimensionId[] = ['kerkesa', 'kapitali', 'aftesite', 'veshtiresia', 'ekonomia', 'rreziku'];
@@ -331,14 +331,14 @@ function riskDimension(a: BusinessArchetype, ctx: CountryDataContext): Dimension
   const inflation = latestValue(ctx, 'inflation_cpi') ?? latestValue(ctx, 'imf_inflation');
   if (inflation) {
     usedData = true;
-    const penalty = inflation.value >= 10 ? 15 : inflation.value >= 6 ? 10 : inflation.value >= 4 ? 5 : 0;
+    const penalty = inflation.value >= 10 ? 15 : inflation.value >= HIGH_INFLATION_PCT ? 10 : inflation.value >= 4 ? 5 : 0;
     score -= penalty;
     notes.push(`${inflation.text}${penalty > 0 ? ` (−${penalty})` : ' (pa zbritje)'}`);
   }
   const lending = latestValue(ctx, 'lending_rate');
   if (lending) {
     usedData = true;
-    const penalty = lending.value >= 15 ? 10 : lending.value >= 10 ? 5 : 0;
+    const penalty = lending.value >= 15 ? 10 : lending.value >= HIGH_LENDING_RATE_PCT ? 5 : 0;
     score -= penalty;
     notes.push(`${lending.text}${penalty > 0 ? ` (−${penalty})` : ' (pa zbritje)'}`);
   }
@@ -390,7 +390,8 @@ export function scoreIdea(input: ScoreInput): ScoreResult {
     missing.length > 0
       ? ` ${missing.length} nga ${dimensions.length} dimensione nuk u vlerësuan (${missing.map((d) => d.labelSq).join(', ')}) dhe nuk u trajtuan si 0; totali llogaritet mbi ${formatNumber(assessedWeightPct, 0)}% të peshës.`
       : '';
-  return { total, dimensions, weights, assessedWeightPct, noteSq: `${SCORE_NOTE_SQ}${missingSq}` };
+  const blockedSq = input.fit.eligible ? '' : ' Ideja ka pengesa nga profili juaj; pikëzimi tregohet vetëm për krahasim.';
+  return { total, dimensions, weights, assessedWeightPct, noteSq: `${SCORE_NOTE_SQ}${missingSq}${blockedSq}` };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

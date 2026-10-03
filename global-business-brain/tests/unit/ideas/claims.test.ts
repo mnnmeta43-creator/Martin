@@ -1,3 +1,4 @@
+// SYNTHETIC — format mirrors the documented API; values are not real
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Claim, CountryDataContext, ProfileFit } from '@/lib/domain/types';
 import { buildFinancialInputs } from '@/lib/finance/build';
@@ -232,7 +233,7 @@ describe('buildWhyFailClaims', () => {
     if (!built.ok) throw new Error(built.reasonSq);
     const claims = buildWhyFailClaims(losing, synthetic, projectScenario(built.inputs, 'baze'), FIT_OK, 'EUR');
     expect(byId(claims, ':modeli:kontributi')).toBeDefined();
-    expect(byId(claims, ':modeli:paraja')?.textSq).toContain('nën zero');
+    expect(byId(claims, ':modeli:paraja')?.textSq).toContain('nën zero para muajit të parë');
     expect(byId(claims, ':modeli:rikuperimi')).toBeDefined();
     expect(byId(claims, ':modeli:mungesa-kapitali')).toBeDefined();
   });

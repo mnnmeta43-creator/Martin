@@ -122,18 +122,25 @@ function withRef(text: string, id: string | null): string {
   return id ? `${text} [${id}]` : text;
 }
 
+function claimLine(c: { textSq: string; citations: string[]; kindSq: string; labelSq: string }): string {
+  const markers = refs(c.citations);
+  return `• ${c.textSq}${markers ? ` ${markers}` : ''} (${c.kindSq}; ${c.labelSq})`;
+}
+
 function renderWhy(data: Data<typeof getProjectSummary>): string {
   const idea = data.idea;
   const lines = [`Pse „${idea?.nameSq ?? data.project.title}” mund të ketë kuptim në ${data.project.countryNameSq}${data.project.isDemo ? ' (DEMO — të dhëna fiktive)' : ''}:`];
-  const allClaims = [...(data.analysis?.whyWork ?? []), ...(data.analysis?.macro ?? [])];
-  const claims = allClaims.filter((c, i) => allClaims.findIndex((o) => o.textSq === c.textSq) === i);
-  lines.push('', 'Çfarë thonë analizat e aplikacionit:');
-  if (claims.length === 0) lines.push(`• ${data.analysisNoteSq ?? 'Nuk ka ende pretendime të mbështetura nga të dhënat e ruajtura për këtë vend.'}`);
-  for (const c of claims.slice(0, 6)) lines.push(`• ${c.textSq} ${refs(c.citations)} (${c.kindSq}; ${c.labelSq})`.replace(/ {2,}/g, ' '));
-  if (idea) {
+  if (data.analysis) {
+    lines.push('', 'Çfarë thonë treguesit makro:');
+    if (data.analysis.macro.length === 0) lines.push('• Nuk ka tregues të lidhur me vlera të ruajtura për këtë vend.');
+    for (const c of data.analysis.macro.slice(0, 4)) lines.push(claimLine(c));
+    lines.push('', 'Pse mund të funksionojë (analiza e aplikacionit):');
+    for (const c of data.analysis.whyWork.slice(0, 6)) lines.push(claimLine(c));
+  } else if (idea) {
     const w = idea.whyItCouldWork;
     lines.push(
       '',
+      data.analysisNoteSq ?? '',
       'Arsyetimi i bibliotekës së ideve (supozim, jo fakt):',
       `• Ndryshimi: ${w.changeSq}`,
       `• Problemi: ${w.problemSq}`,
@@ -141,8 +148,8 @@ function renderWhy(data: Data<typeof getProjectSummary>): string {
       `• Arsyeja për të paguar: ${w.reasonToPaySq}`,
       `• Kushtet për fitim: ${w.profitConditionsSq}`,
     );
-    if (idea.falsifiersSq.length > 0) lines.push('', `Çfarë mund ta rrëzojë: ${idea.falsifiersSq.slice(0, 2).join(' ')}`);
   }
+  if (idea && idea.falsifiersSq.length > 0) lines.push('', `Çfarë mund ta rrëzojë: ${idea.falsifiersSq.slice(0, 2).join(' ')}`);
   const total = data.analysis?.score.total;
   lines.push(
     '',
@@ -188,11 +195,11 @@ function renderCompare(data: Data<typeof compareCountry>): string {
       `• ${withRef(`Fuqia blerëse (PBB për frymë, PPP): ${r.purchasingPower.value === null ? 'mungon' : r.purchasingPower.valueSq}${r.purchasingPower.period ? ` (${r.purchasingPower.period})` : ''}`, r.purchasingPower.citation)}`,
       `• ${withRef(`Niveli i çmimeve: ${r.priceLevel.value === null ? 'mungon' : r.priceLevel.valueSq}${r.priceLevel.period ? ` (${r.priceLevel.period})` : ''}`, r.priceLevel.citation)}`,
       `• Mbulimi i të dhënave: ${r.coverageSq}`,
-      `• ${r.operabilitySq}`,
+      `• E drejta për të operuar: ${r.operabilitySq}`,
     );
-    for (const w of r.warningsSq.slice(0, 2)) lines.push(`• Kujdes: ${w}`);
+    for (const w of r.warningsSq.slice(0, 1)) lines.push(`• Kujdes: ${w}`);
   }
-  for (const w of data.warningsSq.slice(0, 3)) lines.push(`Kujdes: ${w}`);
+  for (const w of data.warningsSq.slice(0, 2)) lines.push(`Kujdes: ${w}`);
   if (data.profileNoteSq) lines.push(data.profileNoteSq);
   lines.push('', data.noteSq, data.scoreNoteSq);
   return lines.join('\n');
@@ -212,7 +219,7 @@ function renderTasks(data: Data<typeof listTasksDue>, title: string): string {
   if (data.officialLinks.length > 0) {
     lines.push('', `Lidhje zyrtare për verifikim: ${data.officialLinks.map((l) => withRef(l.nameSq, l.citation)).join('; ')}`);
   }
-  if (data.plan) lines.push('', `Plani: ${Math.round(data.plan.completionPct)}% i përfunduar (${data.plan.noteSq})`);
+  if (data.plan) lines.push('', `Plani: ${Math.floor(data.plan.completionPct)}% i përfunduar (${data.plan.noteSq}).`);
   return lines.join('\n');
 }
 

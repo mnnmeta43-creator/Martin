@@ -1,3 +1,4 @@
+// SYNTHETIC — format mirrors the documented API; values are not real
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Claim, CountryDataContext, EvidenceEntry } from '@/lib/domain/types';
 import { buildMacroClaims } from '@/lib/ideas/claims';

@@ -24,7 +24,9 @@ import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/fin
 import {
   ASSUMPTIONS_NOT_GUARANTEES_SQ,
   categoryLabelSq,
+  citationUnitSq,
   cityLabelSq,
+  completionPctSq,
   COST_SOURCE_LABELS_SQ,
   DEMO_BANNER_SQ,
   DEMO_WARNING_SQ,
@@ -300,7 +302,7 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
   kvRow(ws, r++, 'Data e të dhënave të ruajtura', formatDateTime(input.project.dataSnapshot.capturedAt));
   kvRow(ws, r++, 'Data e eksportit', formatDateTime(input.generatedAt));
   kvRow(ws, r++, 'Horizonti i parashikimit (muaj)', ctx.inputs.horizonMonths, ctx.fmt.int);
-  kvRow(ws, r++, 'Përfundimi i planit', `${formatNumber(input.progress.completionPct, 0)}% (përfundim i planit, jo probabilitet suksesi)`);
+  kvRow(ws, r++, 'Përfundimi i planit', `${completionPctSq(input.progress.completionPct)} (përfundim i planit, jo probabilitet suksesi)`);
   r = summaryScenarioTable(ws, r + 1, ctx) + 1;
 
   ws.getCell(r, 1).value = 'Shënime të rëndësishme';
@@ -697,8 +699,10 @@ function buildCapitalSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
   ws.getCell(r, 1).font = { bold: true, size: 12 };
   r++;
   for (const s of EXPORT_SCENARIOS) noteRow(ws, r++, `${SCENARIO_LABELS[s]}: ${ctx.input.projections[s].payback.statementSq}`, 4);
-  r = notesBlock(ws, r + 1, 'Si llogaritet (skenari Bazë)', ctx.input.projections.baze.capital.explanationSq, 4);
-  noteRow(ws, r, NO_FINANCING_SQ, 4, { bold: true });
+  const explanation = ctx.input.projections.baze.capital.explanationSq;
+  r = notesBlock(ws, r + 1, 'Si llogaritet (skenari Bazë)', explanation, 4);
+  // The engine usually states this itself; repeat it only if its explanation does not.
+  if (!explanation.some((line) => line.includes('Nuk supozohet asnjë kredi'))) noteRow(ws, r, NO_FINANCING_SQ, 4, { bold: true });
   freeze(ws, 3, 1);
 }
 
@@ -734,7 +738,7 @@ function buildPlanSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
   noteRow(
     ws,
     2,
-    `Përfundimi i planit: ${formatNumber(progress.completionPct, 0)}% (${progress.completedTasks} nga ${progress.totalTasks} detyra). ${progress.labelSq}`,
+    `Përfundimi i planit: ${completionPctSq(progress.completionPct)} (${progress.completedTasks} nga ${progress.totalTasks} detyra). ${progress.labelSq}`,
     12,
     { bold: true },
   );
@@ -754,7 +758,8 @@ function buildPlanSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
     row.getCell(9).value = phase.proofOfCompletionSq;
     row.getCell(10).value = phase.continueCriterionSq;
     row.getCell(11).value = phase.stopCriterionSq;
-    setNumber(row.getCell(12), progress.byPhase[phase.id]?.completionPct ?? null, '0');
+    const phasePct = progress.byPhase[phase.id]?.completionPct;
+    setNumber(row.getCell(12), typeof phasePct === 'number' ? Math.floor(phasePct) : null, '0');
     wrapRow(row, PHASE_COLUMNS_SQ.length);
     r++;
   }
@@ -852,7 +857,7 @@ function buildSourcesSheet(wb: ExcelJS.Workbook, ctx: Ctx): void {
     ws.getCell(r, 5).value = c.period ?? '—';
     if (typeof c.value === 'number' && Number.isFinite(c.value)) setNumber(ws.getCell(r, 6), c.value, 'General');
     else ws.getCell(r, 6).value = 'mungon';
-    ws.getCell(r, 7).value = c.unitLabelSq ?? '';
+    ws.getCell(r, 7).value = citationUnitSq(c);
     setLink(ws.getCell(r, 8), c.url);
     ws.getCell(r, 9).value = c.retrievedAt ? formatDateTime(c.retrievedAt) : '—';
     ws.getCell(r, 10).value = c.sourceLastUpdated ? formatDate(c.sourceLastUpdated) : '—';

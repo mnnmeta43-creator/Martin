@@ -126,6 +126,11 @@ export function indicatorNameSq(code: string | undefined): string {
   return getIndicator(code)?.nameSq ?? code;
 }
 
+/** Unit of a cited value: the citation's own label, else the indicator catalogue's. */
+export function citationUnitSq(citation: Citation): string {
+  return citation.unitLabelSq ?? (citation.indicatorCode ? getIndicator(citation.indicatorCode)?.unitLabelSq : undefined) ?? '';
+}
+
 /** Tasks of a 7/30/90-day horizon, with current statuses taken from `input.tasks`. */
 export function horizonTasks(input: ExportInput, key: keyof Plan['horizons']): PlanTask[] {
   const current = new Map(input.tasks.map((t) => [t.id, t]));
@@ -141,6 +146,11 @@ export function breakEvenSq(ue: UnitEconomics, unitLabelSq: string): string {
   const customers =
     ue.breakEvenCustomersPerMonth === null ? '' : ` (rreth ${formatNumber(ue.breakEvenCustomersPerMonth, 1)} klientë)`;
   return `${formatNumber(ue.breakEvenUnitsPerMonth, 1)} ${unitLabelSq} në muaj${customers}.`;
+}
+
+/** Completion is floored, like the plan module's own label, so progress is never overstated. */
+export function completionPctSq(pct: number | null | undefined): string {
+  return typeof pct === 'number' && Number.isFinite(pct) ? `${Math.floor(pct)}%` : '—';
 }
 
 /** "0 = para nisjes" — month 0 is the opening balance after the startup spend. */

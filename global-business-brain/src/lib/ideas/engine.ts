@@ -150,6 +150,13 @@ function dataWarnings(a: BusinessArchetype, ctx: CountryDataContext): string[] {
   return out;
 }
 
+/** The target city belongs to the target countries; it is never attached to another country. */
+function cityFor(profile: UserProfile, ctx: CountryDataContext): string | undefined {
+  const city = profile.targetCity?.trim();
+  if (!city) return undefined;
+  return profile.targetCountries.some((c) => c.toUpperCase() === ctx.country.code.toUpperCase()) ? city : undefined;
+}
+
 function summaryOf(a: BusinessArchetype): string {
   return `${a.taglineSq} Kush paguan: ${a.payingCustomerSq}`;
 }
@@ -209,7 +216,7 @@ export function evaluateIdeaDetailed(a: BusinessArchetype, profile: UserProfile,
   const recommendation: IdeaRecommendation = {
     archetypeId: a.id,
     countryCode: ctx.country.code,
-    ...(profile.targetCity ? { city: profile.targetCity } : {}),
+    ...(cityFor(profile, ctx) ? { city: cityFor(profile, ctx) } : {}),
     nameSq: a.nameSq,
     summarySq: summaryOf(a),
     fit,

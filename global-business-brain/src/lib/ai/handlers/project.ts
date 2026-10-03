@@ -97,7 +97,7 @@ function progressView(tasks: PlanTask[]) {
     completedTasks: progress.completedTasks,
     totalTasks: progress.totalTasks,
     labelSq: progress.labelSq,
-    noteSq: '% = përfundimi i planit, jo probabilitet suksesi.',
+    noteSq: 'përfundim i planit, jo probabilitet suksesi',
   };
 }
 
@@ -312,7 +312,7 @@ export function listTasksDue(input: { days: number }, env: ToolEnv) {
     dueTasksOmitted: shown.omitted,
     nextTasks: due.length === 0 ? open.slice(0, 3).map((t) => taskView(t, elapsed)) : [],
     toVerify: [
-      ...archetype.regulationNotesSq.map((textSq) => ({ kind: 'rregullore', textSq, noteSq: VERIFY_LOCALLY_SQ })),
+      ...archetype.regulationNotesSq.map((textSq) => ({ kind: 'rregullore', textSq, noteSq: /verifikim lokal/i.test(textSq) ? null : VERIFY_LOCALLY_SQ })),
       ...archetype.licensedProfessionalsSq.map((p) => ({ kind: 'profesionist_i_licencuar', textSq: `Kërkohet: ${p}.`, noteSq: VERIFY_LOCALLY_SQ })),
       ...unverified.map((l) => ({
         kind: 'kosto_supozim',

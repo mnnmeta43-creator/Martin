@@ -96,10 +96,13 @@ describe('buildPlanPdf', () => {
     expect(text).toContain(normalize(first.titleSq));
     expect(text).toContain('Përfunduar');
     expect(text).toContain('Në progres');
+    // Cumulative horizons are de-duplicated: each task appears once.
+    const occurrences = text.split(normalize(first.titleSq)).length - 1;
+    expect(occurrences).toBe(1);
   });
 
   it('reports plan completion as completion, not probability', () => {
-    expect(text).toContain(`Përfundimi i planit: ${formatNumber(input.progress.completionPct, 0)}%`);
+    expect(text).toContain(`Përfundimi i planit: ${Math.floor(input.progress.completionPct)}%`);
     expect(text).toContain('jo probabilitetin e suksesit');
   });
 
@@ -156,7 +159,7 @@ describe('buildPlanPdf — long text and edge cases', () => {
     const input: ExportInput = { ...base, citations: [], plan: { ...base.plan, horizons: { d7: [], d30: [], d90: [] } } };
     const text = extractPdfText(await buildPlanPdf(input, { compress: false }));
     expect(text).toContain('Nuk ka tregues të ruajtur me burim për këtë projekt.');
-    expect(text).toContain('Nuk ka detyra për këtë periudhë.');
+    expect(text).toContain('Nuk ka detyra të tjera për këtë periudhë.');
   });
 });
 

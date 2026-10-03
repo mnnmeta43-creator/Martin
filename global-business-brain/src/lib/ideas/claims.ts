@@ -57,8 +57,6 @@ const FLAT_PP = 0.05;
 const FLAT_PCT = 0.5;
 const MINUS = '−';
 
-const ASSESSABLE_STANCES: ReadonlySet<MacroStance> = new Set(['mbeshtet', 'kundershton', 'pa_vleresim']);
-
 /** Failure kinds that can be checked directly with customers (the rest are risks to plan for). */
 const TESTABLE_FAILURES: ReadonlySet<FailureKind> = new Set(['kerkese_e_pamjaftueshme', 'cmim', 'konkurrence']);
 
@@ -208,10 +206,12 @@ export function assessMacroLinks(a: BusinessArchetype, ctx: CountryDataContext):
   return a.macroLinks.map((link) => assessLink(link, ctx));
 }
 
-function stanceSentenceSq(m: MacroLinkAssessment): string {
-  if (m.stance === 'mbeshtet') return `Kjo e mbështet lidhjen me idenë (hipotezë). ${m.link.ifSupportsSq}`;
-  if (m.stance === 'kundershton') return `Kjo e kundërshton lidhjen me idenë (hipotezë). ${m.link.ifContradictsSq}`;
-  return 'Nga ky tregues lidhja nuk mund të gjykohet.';
+/** Verdict → mechanism → what it means for the idea, in that order. */
+function interpretationSq(m: MacroLinkAssessment): string {
+  const mechanism = `Mekanizmi: ${m.link.mechanismSq}`;
+  if (m.stance === 'mbeshtet') return `${m.verdictSq} Kjo e mbështet lidhjen me idenë (hipotezë). ${mechanism} ${m.link.ifSupportsSq}`;
+  if (m.stance === 'kundershton') return `${m.verdictSq} Kjo e kundërshton lidhjen me idenë (hipotezë). ${mechanism} ${m.link.ifContradictsSq}`;
+  return `${m.verdictSq} Nga ky tregues lidhja nuk mund të gjykohet. ${mechanism}`;
 }
 
 function claimsForLink(a: BusinessArchetype, ctx: CountryDataContext, m: MacroLinkAssessment): Claim[] {
@@ -245,7 +245,7 @@ function claimsForLink(a: BusinessArchetype, ctx: CountryDataContext, m: MacroLi
     claim(macroId(a, code, 'fakt'), `${prefix}${m.nameSq}: ${valueSq}.${staleSq}`, 'fakt', 'mbeshtetet_nga_te_dhenat', [m.citation]),
     claim(
       macroId(a, code, `interpretim:${m.stance}`),
-      `${prefix}${m.verdictSq} ${stanceSentenceSq(m)} Mekanizmi: ${m.link.mechanismSq}`,
+      `${prefix}${interpretationSq(m)}`,
       'interpretim',
       'hipoteze',
       [m.citation],
@@ -256,11 +256,6 @@ function claimsForLink(a: BusinessArchetype, ctx: CountryDataContext, m: MacroLi
 /** Facts and hypotheses for each macro link of the idea, in the archetype's order. */
 export function buildMacroClaims(a: BusinessArchetype, ctx: CountryDataContext): Claim[] {
   return assessMacroLinks(a, ctx).flatMap((m) => claimsForLink(a, ctx, m));
-}
-
-/** Macro links that have a measured value and an assessable verdict. */
-export function isAssessedStance(stance: MacroStance): boolean {
-  return ASSESSABLE_STANCES.has(stance);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -417,6 +412,13 @@ function evidenceRiskClaims(a: BusinessArchetype, ctx: CountryDataContext): Clai
   ];
 }
 
+/** First month whose closing cash is negative; 0 when own capital does not even cover the startup spend. */
+function firstNegativeCashMonth(projection: ProjectionResult): number | null {
+  if (!(projection.minCashBalance < 0)) return null;
+  if (projection.capital.ownCapital < projection.capital.startupTotal) return 0;
+  return projection.rows.find((r) => r.cashBalance < 0)?.month ?? projection.minCashMonth;
+}
+
 function engineRiskClaims(a: BusinessArchetype, projection: ProjectionResult | null, currency?: CurrencyCode): Claim[] {
   if (!projection) return [];
   const m = moneyFn(currency);
@@ -432,12 +434,13 @@ function engineRiskClaims(a: BusinessArchetype, projection: ProjectionResult | n
       ),
     );
   }
-  if (projection.minCashBalance < 0) {
-    const when = projection.minCashMonth === 0 ? 'që para muajit të parë' : `në muajin ${projection.minCashMonth}`;
+  const firstNegative = firstNegativeCashMonth(projection);
+  if (firstNegative !== null) {
+    const when = (month: number | null) => (month === 0 || month === null ? 'para muajit të parë' : `në muajin ${month}`);
     out.push(
       claim(
         id('paraja'),
-        `Me supozimet e skenarit bazë paraja bie nën zero (minimumi ${m(projection.minCashBalance)} ${when}); pa kapital shtesë ose ndryshim plani biznesi mund të ndalet para se të fitojë.`,
+        `Me supozimet e skenarit bazë paraja bie nën zero ${when(firstNegative)} (minimumi ${m(projection.minCashBalance)} ${when(projection.minCashMonth)}); pa kapital shtesë ose ndryshim plani biznesi mund të ndalet para se të fitojë.`,
         'supozim',
         'hipoteze',
       ),

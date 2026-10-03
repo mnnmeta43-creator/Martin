@@ -1,3 +1,4 @@
+// SYNTHETIC — format mirrors the documented API; values are not real
 /**
  * Invariants of evaluateIdea over the WHOLE curated library (whatever size it has right now),
  * for every demo economy, plus the synthetic test archetype so the suite never runs empty.

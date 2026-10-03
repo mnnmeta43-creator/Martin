@@ -39,9 +39,9 @@ export function requireArchetype(ctx: AssistantContext): BusinessArchetype {
   return ctx.archetype;
 }
 
-/** Whole currency units: enough precision for chat answers about totals. */
+/** Same precision as the rest of the app (the currency's minor units), so figures match the engine notes. */
 export function moneySq(value: number | null | undefined, currency: CurrencyCode): string {
-  return formatMoney(value, currency, { decimals: 0 });
+  return formatMoney(value, currency);
 }
 
 export function signedMoneySq(value: number | null | undefined, currency: CurrencyCode): string {

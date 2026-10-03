@@ -1,3 +1,4 @@
+// SYNTHETIC — format mirrors the documented API; values are not real
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { CountryDataContext } from '@/lib/domain/types';
 import {
